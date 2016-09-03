@@ -5,7 +5,6 @@ import io.DirectoryPath
 import main.Arguments
 import specification.process.Level
 import org.specs2.specification.core.Fragment
-import org.specs2.specification.create.DefaultFragmentFactory
 
 object HtmlBodyPrinterSpec extends Specification { def is = s2"""
 

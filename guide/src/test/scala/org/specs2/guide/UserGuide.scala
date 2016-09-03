@@ -31,6 +31,7 @@ object UserGuide extends UserGuidePage { def is = "User Guide".title ^ s2"""
  ${link(DetailedTopics).hide}
  ${link(Troubleshooting).hide}
 
+ ${link(examples.SomeSpec)}
 """
 
 }
