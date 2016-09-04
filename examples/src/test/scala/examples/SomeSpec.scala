@@ -3,14 +3,22 @@ package examples
 /**
   *
   */
-object SomeSpec extends org.specs2.mutable.Specification /*with AutoExamples with Snippets with TextDsl*/ {
+object SomeSpec extends org.specs2.mutable.Specification  {
 
-  "Specification for Iterables extensions".title
+  s2"""Either `\/[A, B]` is an alternative to `Either[A, B]`.""".p
 
-  "The sameElementsAs function returns true" >> {
-    "if 2 lists of lists contain the same elements in a different order" >> {
-      List(List(1), List(2, 3)) must_== 1
-    }
+  eg {
+    val i = 1
 
+    i must_== 1
+    i + 1 must_== 2
+  }
+
+  s2"""From `Either[A, B]` to `\/[A, B]`.""".p
+  eg {
+    val i = 1
+
+    i must_== 1
+    i + 2 must_== 2
   }
 }
