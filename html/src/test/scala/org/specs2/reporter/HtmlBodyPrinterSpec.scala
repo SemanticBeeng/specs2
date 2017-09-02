@@ -3,14 +3,16 @@ package reporter
 
 import io.DirectoryPath
 import main.Arguments
+import org.specs2.matcher.XmlMatchers
+import org.specs2.specification.Forms
 import specification.process.Level
-import org.specs2.specification.core.Fragment
+import specification.core.Fragment
+import scala.xml.NodeSeq
 
-object HtmlBodyPrinterSpec extends Specification { def is = s2"""
+object HtmlBodyPrinterSpec extends Specification with Forms with XmlMatchers { def is = s2"""
 
  A hidden reference must not be printed $hidden
-
- A snippet be printed $snippet
+ A form must be printed $printForm
 
 """
 
@@ -18,11 +20,11 @@ object HtmlBodyPrinterSpec extends Specification { def is = s2"""
     print(link(HtmlBodyPrinterSpec).hide) must beEmpty
   }
 
-  def snippet = {
-    //print(DefaultFragmentFactory.code("val a = 123")) must_== "val a = 123"
-    success
+  def printForm = {
+    val ns: NodeSeq = print(formFragmentFactory.FormFragment(form("hey").tr(prop("test", 1, 2))))
+    ns must \\(<form></form>)
   }
 
-  def print(f: Fragment) =
-    HtmlBodyPrinter.printFragment(Arguments(), Level.Root, DirectoryPath.Root, pandoc = true)(f)
+  def print(f: Fragment): NodeSeq =
+    HtmlBodyPrinter.printFragment(f, success, Arguments(), Level.Root, DirectoryPath.Root, pandoc = true)
 }

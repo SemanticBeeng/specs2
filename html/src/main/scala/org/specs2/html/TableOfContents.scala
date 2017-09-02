@@ -3,12 +3,15 @@ package html
 
 import control._
 import specification.core._
+
 import scala.xml.NodeSeq
 import io._
 import xml.Nodex._
 import Htmlx._
+import org.specs2.fp._
+import org.specs2.fp.syntax._
 import data.Trees._
-import scalaz._, Scalaz._
+import org.specs2.concurrent.ExecutionEnv
 import text.Trim._
 
 /**
@@ -18,32 +21,32 @@ import text.Trim._
 trait TableOfContents {
 
   /** create a table of contents for all the specifications */
-  def createToc(specifications: List[SpecStructure], outDir: DirectoryPath, entryMaxSize: Int, fileSystem: FileSystem): Action[Unit] = {
+  def createToc(env: Env, specifications: List[SpecStructure], outDir: DirectoryPath, entryMaxSize: Int, fileSystem: FileSystem): Operation[Unit] = {
     // sort specifications a, b, c so that a depends on b and c
-    val sorted = SpecStructure.reverseTopologicalSort(specifications).map(_.toList).getOrElse(List())
+    val sorted = SpecStructure.reverseTopologicalSort(specifications)(env.specs2ExecutionEnv).map(_.toList).getOrElse(List())
     for {
       pages   <- readHtmlPages(sorted, outDir, fileSystem)
-      toc     =  createToc(pages, outDir, entryMaxSize)
+      toc     =  createToc(pages, outDir, entryMaxSize)(env.specs2ExecutionEnv)
       _       <- saveHtmlPages(pages.map(page => page.addToc(toc(page))), fileSystem)
     } yield ()
   }
 
   /** read the generated html pages and return them as a tree, based on the links relationships between them */
-  def readHtmlPages(specifications: List[SpecStructure], outDir: DirectoryPath, fileSystem: FileSystem): Action[List[SpecHtmlPage]] =
+  def readHtmlPages(specifications: List[SpecStructure], outDir: DirectoryPath, fileSystem: FileSystem): Operation[List[SpecHtmlPage]] =
     for {
       paths <- fileSystem.listFilePaths(outDir)
-      pages <- createSpecPages(paths.toList, specifications, outDir, fileSystem)
+      pages <- createSpecPages(paths, specifications, outDir, fileSystem)
     } yield pages
 
-  def createSpecPages(paths: List[FilePath], specifications: List[SpecStructure], outDir: DirectoryPath, fileSystem: FileSystem): Action[List[SpecHtmlPage]] = {
+  def createSpecPages(paths: List[FilePath], specifications: List[SpecStructure], outDir: DirectoryPath, fileSystem: FileSystem): Operation[List[SpecHtmlPage]] = {
     specifications.flatMap { spec =>
       val path = SpecHtmlPage.outputPath(outDir, spec)
       if (paths contains path) Some(fileSystem.readFile(path).map(content => SpecHtmlPage(spec, path, outDir, content)))
       else None
-    }.sequenceU
+    }.sequence
   }
 
-  def createToc(pages: List[SpecHtmlPage], outDir: DirectoryPath, entryMaxSize: Int): SpecHtmlPage => NodeSeq = {
+  def createToc(pages: List[SpecHtmlPage], outDir: DirectoryPath, entryMaxSize: Int)(implicit ee: ExecutionEnv): SpecHtmlPage => NodeSeq = {
     pages match {
       case Nil => (page: SpecHtmlPage) => NodeSeq.Empty
       case main :: rest =>
@@ -70,13 +73,13 @@ trait TableOfContents {
     }
   }
 
-  def pagesTree(page: SpecHtmlPage, pages: List[SpecHtmlPage]): TreeLoc[SpecHtmlPage] =
+  def pagesTree(page: SpecHtmlPage, pages: List[SpecHtmlPage])(implicit ee: ExecutionEnv): TreeLoc[SpecHtmlPage] =
     Tree.unfoldTree((page, (pages, List[SpecHtmlPage]()))) { current =>
       val (p1: SpecHtmlPage, (remaining, visited)) = current
-      val (dependents, others) = remaining.partition(p2 => p1.specification.dependsOn(p2.specification) && !visited.contains(p2))
+      val (dependents, others) = remaining.partition(p2 => p1.specification.dependsOn(p2.specification)(ee) && !visited.contains(p2))
       val distinctDependents = dependents.groupBy(_.className).mapValues(_.head).values.toList
       val visited1 = distinctDependents ::: visited
-      ((p1, (others, visited1)), () => distinctDependents.sortBy(linkIndexIn(p1.specification.linkReferences)).toStream.map((_, (others, visited1))))
+      ((p1, (others, visited1)), () => distinctDependents.sortBy(linkIndexIn(p1.specification.linkReferencesList)).toStream.map((_, (others, visited1))))
     }.loc.map(_._1)
 
   /** @return the index of a linked specification in 'main' */
@@ -107,8 +110,8 @@ trait TableOfContents {
     }.rootLabel
   }
 
-  def saveHtmlPages(pages: List[SpecHtmlPage], fileSystem: FileSystem): Action[Unit] =
-    pages.map(page => fileSystem.writeFile(page.path, page.content)).sequenceU.void
+  def saveHtmlPages(pages: List[SpecHtmlPage], fileSystem: FileSystem): Operation[Unit] =
+    pages.map(page => fileSystem.writeFile(page.path, page.content)).sequence.void
 
 }
 

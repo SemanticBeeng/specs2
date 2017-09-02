@@ -115,6 +115,7 @@ Future { Thread.sleep(100); 1 } must be_>(0).await(retries = 2, timeout = 100.mi
  * use `attempt` to create a matcher that will match on `Matcher[scalaz.concurrent.Future[T]]` (this requires an ${"execution environment" ~/ ExecutionEnvironments}): ${snippet{
   // 8<--
   import scala.concurrent.duration._
+  import org.specs2.matcher.FuturezMatchers._
   // 8<--
 // see the Matchers-Futures reference card on how to get an ExecutionEnv
 implicit val ee: ExecutionEnv = ???
@@ -177,8 +178,8 @@ t1 must beMatching(t2)
 
 The easiest way to create a new matcher is to create it from a function returning a tuple with a boolean and one or more messages: ${snippet{
 
-// import the necessary implicit conversions
-//import org.specs2.matcher.MatchersImplicits._
+// import the necessary implicit conversions if you are outside of a Specification
+// import org.specs2.matcher.MatchersImplicits._
 
 // annotate the return type so that implicit conversions can transform your function into a Matcher object
 // here just return a boolean and a failure message
@@ -239,6 +240,7 @@ $NowLearnTo
 
  - use ${"standard results" ~/ StandardResults} (`failure`, `success`, `skipped`, `todo`...) instead of matchers
  - add ${"descriptions" ~/ ExpectationDescription} to your expectations to create even better failure messages
+ - use a different equality function or display other failure messages with the ${"Diffable typeclass" ~/ DiffableTypeclass}
  - use ${"datatables" ~/ UseDatatables} to conveniently group several examples into one
  - use ${"ScalaCheck" ~/ UseScalaCheck} to generate and verify data for your examples
  - use ${"Mockito " ~/ UseMockito} to mock the interactions with another system
@@ -253,7 +255,7 @@ $AndIfYouWantToKnowMore
  - implement the ${"`AsResult` typeclass" ~/ AsResultTypeclass} to go beyond matchers
  - use the ${"`beA[CaseClass]`" ~/ CaseClassMatchers} matcher to automatically create matchers for case classes
  - use the ${"dependencies matchers" ~/ DependencyMatchers} to specify dependencies between packages
- - use $specs2 matchers ${s"outside $specs2" ~/ OutsideSpecs2}
+ - use $specs2 matchers ${s"outside <s2>specs2</s2>" ~/ OutsideSpecs2}
 
 $vid
 """

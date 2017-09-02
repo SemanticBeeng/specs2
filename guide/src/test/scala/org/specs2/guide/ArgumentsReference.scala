@@ -60,19 +60,24 @@ This reference guide for arguments is divided in several sections:
 
 ## Execution
 
- Name                    | Default value                            | Description
- ----------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------
- `plan`                  | `false`                                  | only report the text of the specification without executing anything
- `skipAll`               | `false`                                  | skip all the examples
- `stopOnFail`            | `false`                                  | skip all examples after the first failure or error
- `stopOnSkip`            | `false`                                  | skip all examples after the first skipped result
- `sequential`            | `false`                                  | don't execute examples concurrently
- `asap`                  | `false`                                  | execute all the examples before reporting them
- `isolated`              | `false`                                  | execute each example in its own specification to get "fresh" local variables
- `threadsNb`             | `Runtime.getRuntime.availableProcessors` | number of threads to use for concurrent execution
- `scheduledThreadsNb`    | `1`                                      | number of threads to use for timed out execution on Scalaz Futures
- `timeFactor`            | `1`                                      | multiply all durations by this factor when waiting for futures
- `executor`              | `""`                                     | implementation of the `org.specs2.specification.process.Executor` trait
+ Name                    | Default value                                    | Description
+ ----------------------- | ----------------------------------------         | -------------------------------------------------------------------------------------------
+ `plan`                  | `false`                                          | only report the text of the specification without executing anything
+ `skipAll`               | `false`                                          | skip all the examples
+ `stopOnFail`            | `false`                                          | skip all examples after the first failure
+ `stopOnError`           | `false`                                          | skip all examples after the first error
+ `stopOnIssue`           | `false`                                          | skip all examples after the first failure or error
+ `stopOnSkip`            | `false`                                          | skip all examples after the first skipped result
+ `sequential`            | `false`                                          | don't execute examples concurrently
+ `asap`                  | `false`                                          | execute all the examples before reporting them
+ `isolated`              | `false`                                          | execute each example in its own specification to get "fresh" local variables
+ `useCustomClassLoader`  | `false`                                          | use a custom class loader set on the `Env` to execute each example. By default sbt's classloader for running tests is attached to the `Env`
+ `threadsNb`             | `min(Runtime.getRuntime.availableProcessors, 4)` | number of threads to use for concurrent execution inside the user examples
+ `specs2ThreadsNb`       | `min(Runtime.getRuntime.availableProcessors, 4)` | number of threads to use for the concurrent execution of specs2 actions
+ `scheduledThreadsNb`    | `1`                                              | number of threads to use for timing out execution
+ `batchSize`             | `min(Runtime.getRuntime.availableProcessors, 4)` | number of examples which start executing concurrently at the time
+ `timeFactor`            | `1`                                              | multiply all durations by this factor when waiting for futures
+ `executor`              | `""`                                             | implementation of the `org.specs2.specification.process.Executor` trait
 
 
 ## Storing
@@ -113,8 +118,8 @@ For ${"the HTML output" ~/ HtmlOutput} the following options can be used:
  `html.template`         | `target/specs2-reports/templates/specs2.html` | copied from the `resources/templates` directory
  `html.variables`        | `Map[String, String]()`                       | passed to the template during the Pandoc evaluation
  `html.nostats`          | `false`                                       | if true no stats are displayed
- `html.search`           | `true`                                        | add a search box to the generated files
- `html.toc`              | `true`                                        | add a table of contents to the generated files
+ `html.search`           | `false`                                       | add a search box to the generated files
+ `html.toc`              | `false`                                       | add a table of contents to the generated files
  `html.toc.entrymaxsize` | `18`                                          | maximum number of characters for an entry in the table of contents
  `html.warn.missingrefs` | `true`                                        | report "see" references which do not correspond to any generated file
 
@@ -145,6 +150,8 @@ There are also a few shortcuts:
  `plan`                                                                | `args(plan=true)`
  `skipAll`                                                             | `args(skipAll=true)`
  `stopOnFail`                                                          | `args(stopOnFail=true)`
+ `stopOnError`                                                         | `args(stopOnError=true)`
+ `stopOnIssue`                                                         | `args(stopOnIssue=true)`
  `stopOnSkip`                                                          | `args(stopOnSkip=true)`
  `sequential`                                                          | `args(sequential=true)`
  `isolated`                                                            | `args(isolated=true)`

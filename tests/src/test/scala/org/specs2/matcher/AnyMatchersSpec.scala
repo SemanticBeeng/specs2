@@ -18,7 +18,7 @@ class AnyMatchersSpec extends script.Specification with Groups with ResultMatche
   be_==~ checks the equality of 2 objects, up to an implicit conversion
   ${ 1L must be_==~(1) }
   ${ 2L must not be_==~(1) }
-  ${ (2L must be_==~(1)).message must contain("'2' is not equal to '1'") }
+  ${ (2L must be_==~(1)).message must contain("2 != 1") }
 
   beTrue matches true values
   ${ true must beTrue }
@@ -32,12 +32,6 @@ class AnyMatchersSpec extends script.Specification with Groups with ResultMatche
   ${ List(1, 2) must beLike { case List(a, b) => ok } }
   ${ List(1, 2) must beLike { case List(a, b) => (a + b) must_== 3 } }
   + if the match succeeds but the condition after match fails, a precise failure message can be returned
-
-  toSeq allows to transform a single matcher to a matcher checking a Seq
-  ${ List(1, 2, 3) must ((be_===(_:Int)).toSeq)(Seq(1, 2, 3)) }
-
-  toSet allows to transform a single matcher to a matcher checking a Set
-  ${ Set(1, 2, 3) must ((be_===(_:Int)).toSet)(Set(1, 2, 3)) }
 
  forall allows to transform a single matcher to a matcher checking that all elements of a Seq are matching
   ${ Seq(2, 3, 4) must contain(be_>=(2)).forall }
@@ -106,7 +100,7 @@ Implicits
   + the must implicits can be deactivated with the NoMustExpectations trait
                                                                                                                         """
   "be like" - new group {
-    eg := { (List(1, 2) must beLike { case List(a, b) => (a + b) must_== 2 }) returns "'3' is not equal to '2'" }
+    eg := { (List(1, 2) must beLike { case List(a, b) => (a + b) must_== 2 }) returns "3 != 2" }
   }
 
   "must implicits" - new group {

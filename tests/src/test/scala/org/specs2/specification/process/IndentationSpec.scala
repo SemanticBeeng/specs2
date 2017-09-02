@@ -3,14 +3,14 @@ package specification
 package process
 
 import core._
-import foldm._, stream._, FoldProcessM._, FoldableProcessM._
-import scalaz._, Scalaz._
-import scalaz.concurrent.Task
-import matcher._
+import org.specs2.fp.syntax._
 import Arbitraries._
 import Fragment._
+import control._, ExecuteActions._
+import control.producer._
+import org.specs2.concurrent.ExecutionEnv
 
-class IndentationSpec extends Specification with ScalaCheck with TaskMatchers { def is = s2"""
+class IndentationSpec(implicit ee: ExecutionEnv) extends Specification with ScalaCheck { def is = s2"""
 
  The Indentation fold is responsible for computing the indentation level in a specification
  based on the presence of tab fragments
@@ -23,21 +23,19 @@ class IndentationSpec extends Specification with ScalaCheck with TaskMatchers { 
 """
 
   def positive = prop { fs: Fragments =>
-    indentation(fs) must returnValue((_:Int) must be_>=(0))
+    indentation(fs) must beSome(be_>=(0))
   }
 
   def lessThanOrEqualTabs = prop { fs: Fragments =>
-    val tabsNumber = fs.fragments.collect { case Fragment(Tab(n),_,_) => n }.toList.suml
-    indentation(fs) must returnValue((_: Int) must be_<=(tabsNumber))
+    val tabsNumber = fs.fragmentsList(ee).collect { case Fragment(Tab(n),_,_) => n }.toList.sumAll
+    indentation(fs) must beSome(be_<=(tabsNumber))
   }
 
   def equalTabsWhenNoBacktabs = prop { fs: Fragments =>
-    val tabsNumber = fs.fragments.collect { case Fragment(Tab(n),_,_) => n }.toList.suml
-    indentation(fs.filter(!isBacktab(_))) must returnValue((_:Int) === tabsNumber)
+    val tabsNumber = fs.fragmentsList(ee).collect { case Fragment(Tab(n),_,_) => n }.toList.sumAll
+    indentation(fs.filter(!isBacktab(_))) must beSome(tabsNumber)
   }
 
-  implicit val prettyFragments = Pretties.prettyFragments
-
-  def indentation(fs: Fragments) =
-    Indentation.fold.into[Task].run[ProcessTask](fs.contents)
+  def indentation(fs: Fragments): Option[Int] =
+    fs.contents.fold(Indentation.fold.into[Action]).runOption(ee)
 }

@@ -1,13 +1,15 @@
 package org.specs2
 package matcher
 
-import java.util.concurrent.{ExecutorService}
-import org.specs2.concurrent.ExecutionEnv
-import scalaz.concurrent.Future
+import org.specs2.concurrent._
+import FutureApplicative._
+
+import scala.concurrent._
 import sys._
 import execute._
+import org.specs2.specification.core.{Env, OwnExecutionEnv}
 
-class DataTablesSpec extends Specification with DataTables with ResultMatchers { def is = s2"""
+class DataTablesSpec(val env: Env) extends Specification with DataTables with ResultMatchers with OwnExecutionEnv { def is = s2"""
 
  DataTables are useful to specify lots of examples varying just by a few values.
 
@@ -32,13 +34,14 @@ class DataTablesSpec extends Specification with DataTables with ResultMatchers {
  =================
 
  The default execution model for DataTables is sequential. You can however execute the rows of a DataTable
-   by using `|*` and the execution function                                                                  $applicative1
+   by using `|*`                                                                                             $applicative1
    `|*>` can be used to specify concurrent execution + `play`                                                $applicative2
    by using an applicative result type, like `Future` and the `|@` operator                                  $applicative3
    `|@>` can be used to specify concurrent execution + `play`                                                $applicative4
-   A call to |* returns (es: ExecutorService) => Result                                                      $applicative5
-
+   A call to |* with a previous |> will also execute the table                                               $applicative5
+                                                                                                              
  Even if the execution is concurrent you will get the errors corresponding to each row                       $applicative6
+
                                                                                                              """
 
   def boom = error("boom")
@@ -114,10 +117,10 @@ class DataTablesSpec extends Specification with DataTables with ResultMatchers {
       "y"     !! "h"     ! "y h"        | { (a, b, c) =>  a+" "+b must_== c }
 
     table.message ===
-      "  | a     | b     | c          |                                         "+"\n"+
-      "+ | hello | you   | hello you  |                                         "+"\n"+
-      "x | you   | hello | you hello2 | 'you hello' is not equal to 'you hello2'"+"\n"+
-      "+ | y     | h     | y h        |                                         "
+      "  | a     | b     | c          |                            "+"\n"+
+      "+ | hello | you   | hello you  |                            "+"\n"+
+      "x | you   | hello | you hello2 | 'you hello' != 'you hello2'"+"\n"+
+      "+ | y     | h     | y h        |                            "
   }
 
   def e12 = {
@@ -131,8 +134,8 @@ class DataTablesSpec extends Specification with DataTables with ResultMatchers {
        2    !  2  !  5  | { (a, b, c) =>  a + b must_== c }
 
     (t1 and t2).message ===
-      "  | a | b | c |                        "+"\n"+
-      "x | 2 | 2 | 5 | '4' is not equal to '5'"
+      "  | a | b | c |       "+"\n"+
+      "x | 2 | 2 | 5 | 4 != 5"
   }
 
   def e13 =
@@ -153,16 +156,16 @@ class DataTablesSpec extends Specification with DataTables with ResultMatchers {
   }
 
 
-  def applicative3 = { implicit ee: ExecutionEnv =>
+  def applicative3 = {
     "a" | "b" |>
     1   ! "1" |
-    2   ! "2" |@ { (a: Int, b: String) => Future.delay(a ==== b.toInt) } attempt
+    2   ! "2" |@ { (a: Int, b: String) => Future(a ==== b.toInt) } await
   }
 
-  def applicative4 = { implicit ee: ExecutionEnv =>
+  def applicative4 = {
     "a" | "b" |
     1   ! "1" |
-    2   ! "2" |@> { (a: Int, b: String) => Future.delay(a ==== b.toInt) } attempt
+    2   ! "2" |@> { (a: Int, b: String) => Future(a ==== b.toInt) } await
   }
 
   def applicative5 = {
@@ -171,18 +174,18 @@ class DataTablesSpec extends Specification with DataTables with ResultMatchers {
     2   ! "2" |* { (a: Int, b: String) => a ==== b.toInt }
   }
 
-  def applicative6 = { implicit es: ExecutorService =>
+  def applicative6 = {
     val table =
       "a" | "b" |>
       1   ! "1" |
       2   ! "0" |
       3   ! "3" |* { (a: Int, b: String) => a ==== b.toInt }
 
-    table(es).message ===
-      "  | a | b |                        "+"\n"+
-      "+ | 1 | 1 |                        "+"\n"+
-      "x | 2 | 0 | '2' is not equal to '0'"+"\n"+
-      "+ | 3 | 3 |                        "
+    table.message ===
+      "  | a | b |       "+"\n"+
+      "+ | 1 | 1 |       "+"\n"+
+      "x | 2 | 0 | 2 != 0"+"\n"+
+      "+ | 3 | 3 |       "
 
   }
 

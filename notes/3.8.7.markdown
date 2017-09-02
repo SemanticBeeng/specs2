@@ -1,0 +1,17 @@
+Maintenance version.
+
+## Improvements
+
+ * **core** added the `must_!==` and `should_!==` operators
+ * **core** removed the internal dependency to `scalaz-stream` classes a first step towards removing the dependency on Scalaz
+ * **matcher** moved `TaskMatchers` and `FuturezMatchers` to the `specs2-scalaz` module
+ * **cats** the `specs2-cats` module is deprecated since it only contains `XorMatchers` now removed from `cats`
+ * **project** update scalaz to `7.1.11` (use specs2 version `3.8.7-scalaz-7.1`)
+ * **project** make build Scala 2.13 friendly [#532](https://github.com/etorreborre/specs2/issues/532) (thanks to @SethTisue)
+ * **project** add compatibility with Scalaz 7.3. [#531](https://github.com/etorreborre/specs2/issues/531) (thanks to @sellout)
+ 
+## Fixes
+
+ * **core** fixed the location of `MatchResult` with `org.specs2.mutable.Spec` [#533](https://github.com/etorreborre/specs2/issues/533)
+ * **core** fixed the creation of `Arguments()` when no values are passed so that system properties are still read
+ * **core** fixed the evaluation of results with the `ThrownExpectations` trait so that they are always evaluated just once

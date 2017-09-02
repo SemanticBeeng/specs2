@@ -3,19 +3,24 @@ package matcher
 
 import execute._
 import specification.core.Env
+
 import scala.concurrent._
 import duration._
 import runner._
-import control._
+import control.ExecuteActions._
+import org.specs2.main.Arguments
+import org.specs2.specification.Retries
 
-class FutureMatchersSpec(env: Env) extends Specification with ResultMatchers with Retries {
- val timeFactor = env.arguments.execute.timeFactor
- val sleepTime = 50 * timeFactor.toLong
- implicit val ee = env.executionEnv
- implicit val ec = env.executionContext
- class MyTimeout extends TimeoutException
+class FutureMatchersSpec extends Specification with ResultMatchers with Retries {
 
- def is = section("travis") ^ s2"""
+  lazy val env = Env(Arguments("threadsnb 4"))
+  lazy val timeFactor = env.arguments.execute.timeFactor
+  lazy val sleepTime = 50 * timeFactor.toLong
+  implicit lazy val ee = env.executionEnv
+  implicit lazy val ec = env.executionContext
+  class MyTimeout extends TimeoutException
+
+ def is = section("travis") ^ sequential ^ s2"""
 
  In this specification `Future` means `scala.concurrent.Future`
 
@@ -23,14 +28,14 @@ class FutureMatchersSpec(env: Env) extends Specification with ResultMatchers wit
  test ${ Future.apply(1) must be_>(0).await }
 
  with a retries number and timeout
- ${ Future { Thread.sleep(sleepTime); 1 } must be_>(0).await(retries = 3, timeout = 100.millis) }
- ${ (Future { Thread.sleep(sleepTime * 3); 1 } must be_>(0).await(retries = 4, timeout = 10.millis)) returns "Timeout" }
+ ${ Future { sleep(sleepTime); 1 } must be_>(0).await(retries = 3, timeout = 100.millis) }
+ ${ (Future { sleep(sleepTime * 3); 1 } must be_>(0).await(retries = 4, timeout = 10.millis)) returns "Timeout" }
 
  with a retries number only
- ${ Future { Thread.sleep(sleepTime); 1 } must be_>(0).retryAwait(2) }
+ ${ Future { sleep(sleepTime); 1 } must be_>(0).retryAwait(2) }
 
  with a timeout only
- ${ Future { Thread.sleep(sleepTime); 1 } must be_>(0).awaitFor(200.millis) }
+ ${ Future { sleep(sleepTime); 1 } must be_>(0).awaitFor(200.millis) }
 
  timeout applies only to `TimeoutException` itself, not subclasses
  ${ (Future { throw new TimeoutException } must throwA[TimeoutException].await) returns "Timeout" }
@@ -49,7 +54,9 @@ class FutureMatchersSpec(env: Env) extends Specification with ResultMatchers wit
  In a mutable spec with a negated matcher $e1
  In a mutable spec with a scope $e2
 
-"""
+ A Future should be retried the specified number of times in case of a timeout $e3
+ A Future should not be called more than the expected number of times $e4
+""" ^ step(env.shutdown)
 
   def e1 = {
     val thrown = new FutureMatchers with MustThrownExpectations {
@@ -62,12 +69,40 @@ class FutureMatchersSpec(env: Env) extends Specification with ResultMatchers wit
     val thrown = new mutable.Specification with FutureMatchers {
       "timeout ko" in new Scope {
         Future {
-          Thread.sleep(100)
+          try sleep(100) catch { case _: InterruptedException => () }
           1 must_== 2
         }.awaitFor(50.millis)
       }
     }
 
-    ClassRunner.report(env)(thrown).runOption.get.failures === 1
+    ClassRunner.report(env)(thrown).runOption(env.specs2ExecutionEnv).get.failures === 1
   }
+
+  def e3 = {
+    val retries = 2
+    var times = 0
+    val duration = 50l
+    def future = Future {
+      times += 1
+      if (retries != times)
+        try Thread.sleep(duration * 4) catch { case _: Throwable => 0 }
+      0
+    }
+    future must be_==(0).await(retries, duration.millis)
+  }
+
+  def e4 = {
+    val retries = 0
+    var times = 0
+    def future = Future {
+      times += 1
+      0
+    }
+    future must be_==(0).retryAwait(retries)
+    times must be_==(1)
+  }
+
+  def sleep(millis: Long): Unit = try {
+    Thread.sleep(millis)
+  } catch { case _: InterruptedException => () }
 }

@@ -2,14 +2,20 @@ package org.specs2
 package specification
 package script
 
-import core.{Env, Fragment, Fragments}
+import core.{Env, Fragment}
 import create.{FragmentFactory, FragmentsFactory}
-import shapeless.{HList, HNil, ::}
-import shapeless.ops.hlist.{ToTraversable, ToList}
+import _root_.shapeless.{::, HList, HNil}
+import _root_.shapeless.ops.hlist.{ToList, ToTraversable}
 import execute._
 import ResultLogicalCombinators._
+
 import scala.collection.mutable
-import scalaz.syntax.std.list._
+import org.specs2.fp.syntax._
+import org.specs2.collection.Listx._
+import org.specs2.concurrent.ExecutionEnv
+import org.specs2.control._
+import org.specs2.control.Actions._
+import org.specs2.control.ExecuteActions._
 
 /**
  * The GWT trait can be used to associate a piece of text to Given/When/Then steps according to the [BDD](http://en.wikipedia.org/wiki/Behavior-driven_development)
@@ -17,6 +23,9 @@ import scalaz.syntax.std.list._
  */
 trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
   private val factory: FragmentFactory = fragmentFactory; import factory._
+
+  val executionEnv: ExecutionEnv =
+    ExecutionEnv.fromGlobalExecutionContext
 
   /** renaming of the shapeless cons object to avoid imports */
   val :: = shapeless.::
@@ -46,9 +55,10 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
     def given[T](f: StepParser[T]) = GWTGivens[T :: HNil, (StepParser[T]) :: HNil, T](title, template, f :: HNil)
     def given(): GWTGivens[String :: HNil, (StepParser[String]) :: HNil, String] = given(allAsString)
     def when() = GWTGivens[HNil, HNil, Unit](title, template, HNil).when()
-    def when[R, U](value: =>R)(implicit lub: ToList[R :: HNil, U]) = GWTGivens[HNil, HNil, Unit](title, template, HNil).when().apply[R, U] { case _ => value }
+    def when[R, U](value: =>R) = GWTGivens[HNil, HNil, Unit](title, template, HNil).when().apply[R, U] { case _ => value }
 
-    def fragments(text: String): Fragments = Fragments(factory.text(text), factory.break)
+    def fragments(text: String): FragmentsSeq =
+      FragmentsSeq(factory.text(text), factory.break)
 
     def start: Scenario = this
     def end: Scenario = this
@@ -70,12 +80,13 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
   case class GWTGivens[GT <: HList, GTE <: HList, GTU](title: String, template: ScriptTemplate[Scenario, GivenWhenThenLines], givenExtractors: GTE = HNil, isStart: Boolean = true) extends Scenario {
     type S = GWTGivens[GT, GTE, GTU]
 
-    def given[T, U](f: StepParser[T])(implicit lub: ToList[T :: GT, U]) = GWTGivens[T :: GT, (StepParser[T]) :: GTE, U](title, template, f :: givenExtractors)
-    def given[U]()(implicit lub: ToList[String :: GT, U]): GWTGivens[String :: GT, (StepParser[String]) :: GTE, U] = given(allAsString)
+    def given[T, U](f: StepParser[T]) = GWTGivens[T :: GT, (StepParser[T]) :: GTE, U](title, template, f :: givenExtractors)
+    def given[U](): GWTGivens[String :: GT, (StepParser[String]) :: GTE, U] = given(allAsString)
     def when[T](f: StepParser[T]) = GWTWhensApply[T, GT, GTE, GTU, T :: HNil, HNil, (StepParser[T]) :: HNil, HNil, Any](this, f :: HNil, HNil)
     def when(): GWTWhensApply[String, GT, GTE, GTU, String :: HNil, HNil, (StepParser[String]) :: HNil, HNil, Any] = when(allAsString)
 
-    def fragments(text: String): Fragments = Fragments(factory.text(text), factory.break)
+    def fragments(text: String): FragmentsSeq =
+      FragmentsSeq(factory.text(text), factory.break)
 
     def start = copy(isStart = true)
     def end   = copy(isStart = false)
@@ -89,14 +100,16 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
 
     def when[T](f: StepParser[T]) = GWTWhensApply[T, GT, GTE, GTU, T :: WT, WTR, (StepParser[T]) :: WTE, WM, WMU](givens, f :: whenExtractors, mappers)
     def when(): GWTWhensApply[String, GT, GTE, GTU, String :: WT, WTR, (StepParser[String]) :: WTE, WM, WMU] = when(allAsString)
-    def when[R, U](value: =>R)(implicit lub: ToList[R :: WTR, U]): GWTWhens[GT, GTE, GTU, String :: WT, R :: WTR, (StepParser[String]) :: WTE, Mapper[String,GT,Nothing,R] :: WM, U]  =
+    def when[R, U](value: =>R): GWTWhens[GT, GTE, GTU, String :: WT, R :: WTR, (StepParser[String]) :: WTE, Mapper[String,GT,Nothing,R] :: WM, U]  =
       when().apply[R, U] { case _ => value }
 
     def andThen[T](f: StepParser[T]) = GWTThensApply[T, GT, GTE, GTU, WT, WTR, WTE, WM, WMU, (StepParser[T]) :: HNil, HNil](GWTWhens(givens, whenExtractors, mappers), f :: HNil, HNil)
     def andThen(): GWTThensApply[String, GT, GTE, GTU, WT, WTR, WTE, WM, WMU, (StepParser[String]) :: HNil, HNil] = andThen(allAsString)
 
     def title = givens.title
-    def fragments(text: String): Fragments = Fragments(factory.text(text), factory.break)
+
+    def fragments(text: String): FragmentsSeq =
+      FragmentsSeq(factory.text(text), factory.break)
 
     def start = copy(isStart = true)
     def end   = copy(isStart = false)
@@ -116,10 +129,10 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
   case class GWTWhensApply[T, GT <: HList, GTE <: HList, GTU,
                               WT <: HList, WTR <: HList, WTE <: HList, WM <: HList, WMU](givens: GWTGivens[GT, GTE, GTU], whenExtractors: WTE, mappers: WM) {
 
-    def apply[R, U](map: (T :: GT) => R)(implicit lub: ToList[R :: WTR, U]) =
+    def apply[R, U](map: (T :: GT) => R) =
       GWTWhens[GT, GTE, GTU, WT, R :: WTR, WTE, Mapper[T, GT, Nothing, R] :: WM, U](givens, whenExtractors, Mapper[T, GT, Nothing, R](f1 = Some(map)) :: mappers)
 
-    def collect[R, U](map: (T, Seq[GTU]) => R)(implicit lub: ToList[R :: WTR, U]) =
+    def collect[R, U](map: (T, Seq[GTU]) => R) =
       GWTWhens[GT, GTE, GTU, WT, R :: WTR, WTE, Mapper[T, HNil, GTU, R] :: WM, U](givens, whenExtractors, Mapper[T, HNil, GTU, R](f2 = Some(map)) :: mappers)
   }
 
@@ -144,18 +157,18 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
      * For each of this blocks create steps and examples with execution dependencies (values created in a steps and used in
      * another one).
      */
-    def fragments(text: String): Fragments = {
+    def fragments(text: String): FragmentsSeq = {
 
       // results of given and when steps, stored in the reverse order of definition
       var givenSteps: Seq[Fragment] = Seq()
       var whenSteps: Seq[Fragment]  = Seq()
 
       lazy val givenValues = stepsValues(givenSteps)
-      lazy val givenResult = result(givenSteps)
-      lazy val whenValues = stepsValues(whenSteps)
-      lazy val whenResult = result(whenSteps)
+      lazy val givenResult = result(givenSteps).runOption(executionEnv).getOrElse(Success())
+      lazy val whenValues  = stepsValues(whenSteps)
+      lazy val whenResult  = result(whenSteps).runOption(executionEnv).getOrElse(Success())
 
-      template.lines(text, this).lines.foldLeft(Fragments()) { (fs, lines) =>
+      template.lines(text, this).lines.foldLeft(FragmentsSeq.empty) { (fs, lines) =>
         lines match {
           // Text lines are left untouched
           case TextLines(ls) =>
@@ -168,7 +181,6 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
 
           // When lines must create steps with extracted values, and map them using given values
           case WhenLines(ls) =>
-
             whenSteps = (whenExtractorsList zip ls zip whenMappersList).map { case ((extractor, line), mapper) =>
               factory.step(execute(givenResult, extractor, line) { t: Any =>
                 val map = mapper.asInstanceOf[Mapper[Any, HList, Any, Any]]
@@ -209,23 +221,34 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
     private def thenExtractorsList  = thenExtractors.toList.reverse.map(_.asInstanceOf[StepParser[_]])
     private def verificationsList   = verifications.toList.reverse
 
+    private def toHList[T](list: List[T]): HList =
+      list.headOption match {
+        case None => HNil
+        case Some(h) => h :: toHList(list.tail)
+      }
+
     /** @return the values of all executed steps */
     private def stepsValues(steps: Seq[Fragment]) = steps.foldRight(HNil: HList) { (cur, res) =>
-      value(cur.execution.execute(Env()).result) :: res
+      value(timedFuture(cur.execution.startExecution(Env()).executionResult).run(executionEnv)) :: res
     }
+
+    /** @return the results of a list of fragments */
+    private def fragmentsResults(fragments: Seq[Fragment]): Action[List[Result]] =
+      fragments.toList.traverse(_.startExecution(Env()).executionResult)
+
     /** @return a -and- on all the execution results of steps */
-    private def result(steps: Seq[Fragment]) = steps.foldRight(Success(): Result) { (cur, res) =>
-      cur.execution.execute(Env()).result and res
-    }
+    private def result(fragments: Seq[Fragment]) =
+      fragmentsResults(fragments).map(_.suml)
+
     /** execute a block of code depending on a previous result */
     private def executeIf(result: Result)(value: =>Any) = if (result.isSuccess) value else Skipped(" ")
 
     /** zip extractors, lines and steps to intercalate steps between texts fragments (and strip the lines of their delimiters if any */
-    private def appendSteps(extractors: Seq[StepParser[_]], lines: Seq[String], steps: Seq[Fragment]): Seq[Fragment] =
-      (extractors zip lines zip steps).map {
+    private def appendSteps(extractors: Seq[StepParser[_]], lines: Seq[String], steps: Seq[Fragment]): FragmentsSeq =
+      FragmentsSeq((extractors zip lines zip steps).toVector.flatMap {
         case ((extractor: StepParser[_], l: String), s: Fragment) =>
-          Seq(factory.text(extractor.strip(l)), break, s)
-      }.flatten
+          Vector(factory.text(extractor.strip(l)), break, s)
+      })
 
     /** extract values from a line and execute a function */
     private def execute(previousResult: Result, extractor: StepParser[_], line: String)(f: Any => Any) =
@@ -240,7 +263,8 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
       extractor.asInstanceOf[StepParser[Any]].parse(line).fold(e => Error(e), t => DecoratedResult(t._2, Success()))
     }
 
-    private def breaks(n: Int): Fragments = Fragments((1 to n).map(i => factory.break):_*)
+    private def breaks(n: Int): FragmentsSeq =
+      FragmentsSeq((1 to n).toVector.map(i => factory.break))
   }
 
   case class GWTThensApply[T, GT <: HList, GTE <: HList, GTU,
@@ -274,6 +298,5 @@ trait GWT extends StepParsers with Scripts { outer: FragmentsFactory =>
     case DecoratedResult(v, _) => v
     case _ => r
   }
-
 }
 

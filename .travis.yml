@@ -3,15 +3,10 @@ sudo: false
 language: scala
 
 scala:
-  - 2.10.6
-  - 2.11.7
-  - 2.12.0-M5
+  - 2.12.2
 
 jdk:
   - oraclejdk8
-
-branches:
-    - specs2-three
 
 # These directories are cached to S3 at the end of the build
 cache:
@@ -19,8 +14,30 @@ cache:
     - $HOME/.ivy2/cache
     - $HOME/.sbt/boot/
 
-script: 
-  - sbt -sbt-version 0.13.11 -scala-version $TRAVIS_SCALA_VERSION 'testOnly -- xonly timefactor 3 exclude travis'
+before_cache:
+  # Cleanup the cached directories to avoid unnecessary cache updates
+  - find $HOME/.ivy2/cache -name "ivydata-*.properties" -print -delete
+  - find $HOME/.sbt        -name "*.lock"               -print -delete
+
+script:
+  - sbt -jvm-opts .travis.jvmopts -sbt-version 0.13.16 -scala-version $TRAVIS_SCALA_VERSION ';clean ;test:compile'
+  - ./.travis-test.sh coreJVM
+  - ./.travis-test.sh examplesJVM
+  - ./.travis-test.sh junitJVM
+  - ./.travis-test.sh matcherExtraJVM
+  - ./.travis-test.sh mockJVM
+  - ./.travis-test.sh scalacheckJVM
+  - ./.travis-test.sh scalazJVM
+  - ./.travis-test.sh shapelessJVM
+
+  - ./.travis-test.sh gwt
+  - ./.travis-test.sh html
+  - ./.travis-test.sh markdown
+  - ./.travis-test.sh tests
+
+  - ./.travis-test.sh coreJS
+  - ./.travis-test.sh examplesJS
+
   - find $HOME/.sbt -name "*.lock" | xargs rm
   - find $HOME/.ivy2 -name "ivydata-*.properties" | xargs rm
 

@@ -1,36 +1,39 @@
 package org.specs2
 package html
 
-import foldm._, FoldM._, stream._, FoldProcessM._
 import io.{DirectoryPath, FilePath, FileSystem}
 import specification.core._
-import scalaz.concurrent.Task
-import scalaz.{Monoid, Reducer}
-import scalaz.syntax.applicative._
+import org.specs2.fp._
+import org.specs2.fp.syntax._
+import control._
+import org.specs2.concurrent.ExecutionEnv
+import origami._
 
 /**
  * Fold functions to create index files
  */
 object Indexing {
 
+  implicit def executionEnv: ExecutionEnv =
+    ExecutionEnv.fromGlobalExecutionContext
+
   /**
    * An Index fold creates an Index page based on all pages to index and
    * saves it to a given file path
    */
-  def indexFold(path: FilePath) =
-    fromReducer(Index.reducer).into[Task].mapFlatten((index: Index) => 
-      Task.now(index) <* 
-      FileSystem.writeFileTask(path, Index.toJson(index)))
+  def indexFold(path: FilePath): Fold[Operation, IndexedPage, Index] =
+    origami.fold.fromMonoidMap[Operation, IndexedPage, Index](Index.createIndex).mapFlatten((index: Index) =>
+      FileSystem.writeFile(path, Index.toJson(index)).as(index))
 
-  def createIndexedPages(env: Env, specifications: List[SpecStructure], outDir: DirectoryPath): Seq[IndexedPage] =
+  def createIndexedPages(env: Env, specifications: List[SpecStructure], outDir: DirectoryPath): List[IndexedPage] =
     specifications.map(createIndexedPage(env, outDir))
 
   def createIndexedPage(env: Env, outDir: DirectoryPath) = (spec: SpecStructure) => {
     IndexedPage(
       path     = SpecHtmlPage.outputPath(outDir, spec).relativeTo(outDir),
       title    = spec.header.showWords,
-      contents = spec.texts.foldLeft(new StringBuilder)((res, cur) => res.append(cur.description.show)).toString,
-      tags     = spec.fragments.fragments.collect { case Fragment(Marker(t,_,_), _, _) => t.names }.flatten.map(sanitize))
+      contents = spec.textsList.foldLeft(new StringBuilder)((res, cur) => res.append(cur.description.show)).toString,
+      tags     = spec.tagsList.flatMap(_.names).map(sanitize).toIndexedSeq)
   }
 
   def createEntries(page: IndexedPage): Vector[IndexEntry] = 
@@ -88,7 +91,7 @@ object Index {
     def append(a: Index, b: =>Index) = Index(a.entries ++ b.entries)
   }
 
-  val reducer = Reducer.unitReducer((page: IndexedPage) => Index(Indexing.createEntries(page)))
+  val createIndex = (page: IndexedPage) => Index(Indexing.createEntries(page))
 }
 
 case class IndexEntry(title: String, text: String, tags: IndexedSeq[String], path: FilePath)

@@ -8,7 +8,7 @@ import scala.concurrent.duration._
 
 object UseMockito extends UserGuidePage with Mockito { def is = "Mockito".title ^ s2"""
 
-[Mockito](https://code.google.com/p/mockito) allows to specify stubbed values and to verify that some calls have been made to your objects. In order to use those features, you need to extend the `org.specs2.mock.Mockito` trait:${snippet{
+[Mockito](https://github.com/mockito/mockito) allows to specify stubbed values and to verify that some calls have been made to your objects. In order to use those features, you need to extend the `org.specs2.mock.Mockito` trait:${snippet{
 
 class MockitoSpec extends Specification with Mockito { def is = s2"""
 
@@ -102,7 +102,7 @@ mocked.contains("o") must beTrue
 ### With matchers
 
 The built-in Mockito argument matchers can be used to specify the method arguments for stubbing: ${snippet{
-m.get(org.mockito.Matchers.anyInt()) returns "element"
+m.get(org.mockito.ArgumentMatchers.anyInt) returns "element"
 m.get(999) must_== "element"
 }}
 
@@ -183,8 +183,10 @@ got {
 
 #### Order of calls
 
-The order of method calls can be checked by creating calls and chaining them with `andThen`: ${snippet{
+The order of method calls can be checked by creating an `InOrder` implicit and chaining calls with `andThen`: ${snippet{
 val m1 = mock[java.util.List[String]]
+
+implicit val order = inOrder(m1)
 
 m1.get(0)
 m1.get(1)
@@ -192,12 +194,12 @@ m1.get(1)
 there was one(m1).get(0) andThen one(m1).get(1)
 }}
 
-when several mocks are involved, the expected order must be specified as an implicit value: ${snippet{
+Several mocks can also be declared as having ordered calls: ${snippet{
 val m1 = mock[java.util.List[String]]
 val m2 = mock[java.util.List[String]]
 val m3 = mock[java.util.List[String]]
 
-// the order of mock objects doesn't matter here
+// here the order of mock objects doesn't matter
 implicit val order = inOrder(m1, m3, m2)
 
 m1.get(1); m2.get(2); m3.get(3)
@@ -210,7 +212,7 @@ there was one(m1).get(1) andThen one(m2).get(2) andThen one(m3).get(3)
 When specifying the behavior of an object in relation to others you may want to verify that some mocks have been called as collaborators and you don't really want to specify what happens to other mocks because they are just playing the role of stubs.
 
 In this case the `ignoreStubs` method can be used: ${snippet{
-val (stub1, stub2) = (mock[AStub], mock[AStub])
+val (stub1: AStub, stub2: AStub) = (mock[AStub], mock[AStub])
 there were noMoreCallsTo(ignoreStubs(stub1, stub2))
 }}
 
@@ -251,7 +253,7 @@ As advised in the Mockito documentation, `doReturn` must be used in that case: $
 // 8<--
 val spiedList = spy(new LinkedList[String])
 // 8<--
-org.mockito.Mockito.doReturn("one").when(spiedList).get(0)
+org.mockito.Mockito.doReturn("one", Nil:_*).when(spiedList).get(0)
 }}
 
 #### Functions / PartialFunctions

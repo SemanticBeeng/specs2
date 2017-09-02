@@ -1,10 +1,9 @@
 .DS_Store
-.gradle
-build/
-.cache
-.history
-.target/
+
+.idea
+**/target
 .jvmopts
+<<<<<<< HEAD
 pgp.sbt
 project-old/lib_managed/
 project-old/boot/
@@ -52,3 +51,10 @@ test/specs/FitNesseRoot/files/testResults/
 /log_info.log
 *.sw?
 tags
+=======
+
+**/*.hydra
+hydra.log
+hydra-timings.csv
+project/hydra.sbt
+>>>>>>> upstream/master
