@@ -74,13 +74,13 @@ The easiest way to create a new matcher is to derive it from an existing one. Yo
  * "adapt" the actual value ${snippet {
 
 // This matcher adapts the existing `be_<=` matcher to a matcher applicable to `Any`
-def beShort1 = be_<=(5) ^^ { (t: Any) => t.toString.size }
+def beShort1 = be_<=(5) ^^ { (t: Any) => t.toString.length }
 
 // you can use aka to provide some information about the original value, before adaptation
-def beShort2 = be_<=(5) ^^ { (t: Any) => t.toString.size aka "the string size" }
+def beShort2 = be_<=(5) ^^ { (t: Any) => t.toString.length aka "the string size" }
 
 // !!! note: use a BeTypedEqualTo matcher when using aka and equality, otherwise you will be matching against Expectable[T] !!!
-def beFive = be_===(5) ^^ { (t: Any) => t.toString.size aka "the string size" }
+def beFive = be_===(5) ^^ { (t: Any) => t.toString.length aka "the string size" }
 
 // The adaptation can also be done the other way around when it's more readable
 def haveExtension(extension: =>String) = ((_:File).getPath) ^^ endWith(extension)
@@ -240,7 +240,7 @@ $NowLearnTo
 
  - use ${"standard results" ~/ StandardResults} (`failure`, `success`, `skipped`, `todo`...) instead of matchers
  - add ${"descriptions" ~/ ExpectationDescription} to your expectations to create even better failure messages
- - use a different equality function or display other failure messages with the ${"Diffable typeclass" ~/ DiffableTypeclass}
+ - use a different equality function or display other failure messages with the ${("Diffable typeclass" ~ DiffableTypeclass).mute}
  - use ${"datatables" ~/ UseDatatables} to conveniently group several examples into one
  - use ${"ScalaCheck" ~/ UseScalaCheck} to generate and verify data for your examples
  - use ${"Mockito " ~/ UseMockito} to mock the interactions with another system

@@ -1,9 +1,10 @@
 sudo: false
+dist: trusty
 
 language: scala
 
 scala:
-  - 2.12.2
+  - 2.12.3
 
 jdk:
   - oraclejdk8
@@ -20,8 +21,10 @@ before_cache:
   - find $HOME/.sbt        -name "*.lock"               -print -delete
 
 script:
-  - sbt -jvm-opts .travis.jvmopts -sbt-version 0.13.16 -scala-version $TRAVIS_SCALA_VERSION ';clean ;test:compile'
+
   - ./.travis-test.sh coreJVM
+  - ./.travis-test.sh tests
+
   - ./.travis-test.sh examplesJVM
   - ./.travis-test.sh junitJVM
   - ./.travis-test.sh matcherExtraJVM
@@ -47,4 +50,4 @@ notifications:
       - https://webhooks.gitter.im/e/6f43e8d682579a80ef5f
     on_success: always
     on_failure: always
-    on_start: false
+    on_start:   never

@@ -17,3 +17,12 @@ Dependency-free version!
  * introduced a `org.specs2.specification.Retries` trait extending `AroundEach` to retry each example
  * introduced `org.specs2.specification.core.OwnEnv/OwnExecutionEnv` traits to isolate the execution environments of
    some specifications
+ * added `addSections` to "unit" specifications to enclose each block with `section` markers and allow it to be selected
+   with `include` on the command line
+ * *form* display the actual value instead of the expected one for a `Prop` (this might be revisited in the future)
+
+## Fixes
+
+ * fixed the execution with `stopOnXXX` arguments for a sequential spec
+ * *core* the `Result.foreach` method must stop evaluating elements if there is an issue
+

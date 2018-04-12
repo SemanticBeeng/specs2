@@ -12,7 +12,7 @@ import specification.core._
 import specification.process.DefaultExecutor
 import control.ExecuteActions._
 
-class SbtPrinterSpec(env: Env) extends Spec { def is = s2"""
+class SbtPrinterSpec(val env: Env) extends Spec with OwnEnv { def is = s2"""
 
  A SbtPrinter should
    print the specification title if defined      ${printer1().e1}
@@ -29,12 +29,12 @@ class SbtPrinterSpec(env: Env) extends Spec { def is = s2"""
   case class printer1() extends Mockito { outer =>
 
     def e1 = {
-      runAction(printer.printSpecification(env)(new HelloWorldSpec { override def is = "title".title ^ "\ntext" }))(env.specs2ExecutionEnv)
+      runAction(printer.printSpecification(ownEnv)(new HelloWorldSpec { override def is = "title".title ^ "\ntext" }))(ownEnv.specs2ExecutionEnv)
       eventually(there was one(logger).info(beMatching(".*title.*")))
     }
 
     def e2 = {
-      val executed = DefaultExecutor.executeSpec((new HelloWorldSpec).is, Env())
+      val executed = DefaultExecutor.executeSpec((new HelloWorldSpec).is, ownEnv)
 
       print(executed).replaceAll("""(\d+ seconds?, )?\d+ ms""", "0 ms").replaceAll(" ", "_") ===
         """|HelloWorldSpec
@@ -53,7 +53,7 @@ class SbtPrinterSpec(env: Env) extends Spec { def is = s2"""
     }
 
     def print(spec: SpecStructure) = {
-      runAction(printer.print(Env(arguments = Arguments("nocolor")))(spec))(env.specs2ExecutionEnv)
+      runAction(printer.print(Env(arguments = Arguments("nocolor")))(spec))(ownEnv.specs2ExecutionEnv)
       stringLogger.flush()
       stringLogger.messages.mkString("\n")
     }
@@ -63,11 +63,11 @@ class SbtPrinterSpec(env: Env) extends Spec { def is = s2"""
 
     val stringLogger = new Logger with StringOutput {
       def ansiCodesSupported = false
-      def warn(msg: String)  { append(msg) }
-      def error(msg: String) { append(msg) }
-      def debug(msg: String) { append(msg) }
-      def trace(t: Throwable){ append(t.getMessage) }
-      def info(msg: String)  { append(msg) }
+      def warn(msg: String): Unit =  { append(msg) }
+      def error(msg: String): Unit = { append(msg) }
+      def debug(msg: String): Unit = { append(msg) }
+      def trace(t: Throwable): Unit ={ append(t.getMessage) }
+      def info(msg: String): Unit =  { append(msg) }
     }
 
     val printer = new SbtPrinter {

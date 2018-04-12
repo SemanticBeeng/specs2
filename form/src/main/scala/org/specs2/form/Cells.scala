@@ -37,7 +37,7 @@ trait Text {
   def text: String
 
   /** @return the width of the cell, without borders when it's a FormCell */
-  def width: Int = text.size
+  def width: Int = text.length
 }
 /**
  * Base type for anything returning some xml
@@ -169,7 +169,7 @@ case class PropCell(p: Prop[_,_], result: Option[Result] = None) extends Cell {
   def xml(implicit args: Arguments): NodeSeq = {
     val executed = result.getOrElse(skipped)
     (<td style={p.labelStyles}>{p.decorateLabel(p.label)}</td> unless p.label.isEmpty) ++
-    (<td class={executed.statusName}>{p.decorateValue(p.expectedValue.right.toOption.getOrElse(""))}</td> unless !p.expectedValue.right.toOption.isDefined) ++
+    (<td class={executed.statusName}>{p.decorateValue(p.actualValue.right.toOption.getOrElse(""))}</td> unless p.actualValue.right.toOption.isEmpty) ++
     (<td class={executed.statusName} onclick={"showHide("+System.identityHashCode(executed).toString+")"}>{executed.message}</td> unless (executed.isSuccess || executed.message.isEmpty))
   }
 }
@@ -194,7 +194,7 @@ class FormCell(_form: =>Form, result: Option[Result] = None) extends Cell {
    * @return the width of a form when inlined.
    *         It is the width of its text size minus 4, which is the size of the borders "| " and " |"
    */
-  override def width = text.split("\n").map((_:String).size).max[Int] - 4
+  override def width = text.split("\n").map((_: String).length).max[Int] - 4
 }
 object FormCell {
   def unapply(cell: FormCell): Option[Form] = Some(cell.form)

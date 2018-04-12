@@ -203,7 +203,7 @@ case class CaseClassDifferent(className: String,
     renderProperty(indent)(change)
 
   private def renderProperty(indent: String)(r: CaseClassPropertyComparison): String =
-    r.result.render(indent + " " * (r.fieldName.size + 2)).tagWith(r.fieldName)
+    r.result.render(indent + " " * (r.fieldName.length + 2)).tagWith(r.fieldName)
 }
 
 case class OtherIdentical(actual: Any) extends IdenticalComparisonResult {
@@ -249,14 +249,14 @@ abstract class UnorderedCollectionDifferent[Element, Change](same:    Seq[Elemen
     render("")
 
   override def render(indent: String): String = {
-    val newIndent = indent+ " " * (className.size + 1)
+    val newIndent = indent+ " " * (className.length + 1)
 
     Seq(renderIdentical(newIndent) ++ renderChanged(newIndent) ++ renderAdded(newIndent) ++ renderRemoved(newIndent))
       .flatten.mkString("", ",\n"+newIndent, "").wrapWith(className)
   }
 
   private def renderIdentical(indent: String): Option[String] =
-    same.toOption.map(_.map(renderElement(indent)).mkString(", "))
+    same.toOption.map(_.map(renderElement(indent)).mkString("", ",\n"+indent, ""))
 
   private def renderChanged(indent: String): Option[String] =
     changed.toOption.map(_.map(renderChange(indent)).mkString("", ",\n"+indent, ""))
@@ -280,7 +280,7 @@ abstract class OrderedCollectionDifferent[Element](results: Seq[ComparisonResult
     render("")
 
   override def render(indent: String): String = {
-    val newIndent = indent + " " * (className.size + 1)
+    val newIndent = indent + " " * (className.length + 1)
 
     Seq(renderResult(newIndent) ++ renderAdded(newIndent) ++ renderRemoved(newIndent))
       .flatten.mkString("", ",\n"+newIndent, "").wrapWith(className)

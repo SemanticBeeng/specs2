@@ -44,7 +44,8 @@ class JUnitRunner(klass: Class[_]) extends org.junit.runner.Runner with Filterab
 
   /** run the specification with a Notifier */
   def run(n: RunNotifier): Unit = {
-    runWithEnv(n, env).runOption(env.specs2ExecutionEnv)
+    try runWithEnv(n, env).runOption(env.specs2ExecutionEnv)
+    finally env.shutdown
     ()
   }
 
@@ -90,7 +91,7 @@ class JUnitRunner(klass: Class[_]) extends org.junit.runner.Runner with Filterab
    *
    * if the more fine-grained filtering is needed tags must be used
    */
-  def filter(filter: org.junit.runner.manipulation.Filter) {
+  def filter(filter: org.junit.runner.manipulation.Filter): Unit = {
     if (!filter.shouldRun(getDescription)) throw new NoTestsRemainException
   }
 }

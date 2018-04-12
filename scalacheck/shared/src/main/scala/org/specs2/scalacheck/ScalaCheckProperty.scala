@@ -3,7 +3,6 @@ package scalacheck
 
 import org.scalacheck._
 import org.scalacheck.util.{FreqMap, Pretty}
-import org.scalacheck.util.Pretty._
 import execute._
 import specification._
 import AsResultProp._
@@ -114,13 +113,16 @@ trait ScalaCheckFunction extends ScalaCheckProperty {
 
 }
 
-case class ScalaCheckFunction1[T, R](execute: T => R,
-                                 arbitrary: Arbitrary[T], shrink: Option[Shrink[T]],
-                                 collectors: List[T => Any],
-                                 pretty: T => Pretty, prettyFreqMap: FreqMap[Set[Any]] => Pretty,
-                                 asResult: AsResult[R],
-                                 context: Option[Context],
-                                 parameters: Parameters) extends ScalaCheckFunction {
+case class ScalaCheckFunction1[T, R](
+  execute:       T => R,
+  arbitrary:     Arbitrary[T],
+  shrink:        Option[Shrink[T]],
+  collectors:    List[T => Any],
+  pretty:        T => Pretty,
+  prettyFreqMap: FreqMap[Set[Any]] => Pretty,
+  asResult:      AsResult[R],
+  context:       Option[Context],
+  parameters:    Parameters) extends ScalaCheckFunction {
 
   type SelfType = ScalaCheckFunction1[T, R]
 
@@ -841,7 +843,9 @@ object ScalaCheckProperty {
 
   implicit def ScalaCheckPropertyAsExecution[S <: ScalaCheckProperty]: AsExecution[S] = new AsExecution[S] {
     def execute(s: => S): Execution =
-      Execution.withEnv(env => AsResultProp.check(s.prop, s.parameters.overrideWith(env.commandLine), s.prettyFreqMap))
+      Execution.withEnv { env =>
+        AsResultProp.check(s.prop, s.parameters.overrideWith(env.commandLine), s.prettyFreqMap)
+      }
   }
 
   def makeProp[T](f: T => Prop, shrink: Option[Shrink[T]])(implicit a: Arbitrary[T], p: T => Pretty): Prop =

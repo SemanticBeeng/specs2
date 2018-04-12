@@ -39,7 +39,7 @@ class StringEditDistanceSpec extends Spec with StringEditDistance with DataTable
 
  The edit distance algorithm should
    not use too much memory on a big string comparison when working with file lines                        ${g4.e1}
-   dont use too much memory on a big string comparison on any type of string                              ${g4.e2}
+   not use too much memory on a big string comparison on any type of string                               ${g4.e2}
                                                                                                            """
 
   "edit distance" - new g1 {
@@ -99,11 +99,11 @@ class StringEditDistanceSpec extends Spec with StringEditDistance with DataTable
     val factor = 1000
     e1 := {
       (editDistance("kitten\n" * factor, "kitsin\n" * factor) must be_>(0)) and
-      (showDistance("kitten\n" * factor, "kitsin\n" * factor)._1.size must be_>(0))
+      (showDistance("kitten\n" * factor, "kitsin\n" * factor)._1.length must be_>(0))
     }
     e2 := {
       (editDistance("kitten" * factor, "kitsin" * factor) must be_>(0)) and
-      (showDistance("kitten" * factor, "kitsin" * factor)._1.size must be_>(0))
+      (showDistance("kitten" * factor, "kitsin" * factor)._1.length must be_>(0))
     }
   }
 }

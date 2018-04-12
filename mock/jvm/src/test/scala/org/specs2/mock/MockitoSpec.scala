@@ -15,7 +15,6 @@ import scala.concurrent._
 import duration._
 import ExecutionContext.Implicits.global
 import MatchersImplicits._
-import ReturnsSyntax._
 import execute._
 import ActionMatchers._
 import fp.syntax._
@@ -486,7 +485,7 @@ ${step(env)}                                                                    
     }
 
     eg := {
-      list.size answers { m => m.toString.size}
+      list.size answers { m => m.toString.length}
       list.size must_== 4
     }
     eg := {

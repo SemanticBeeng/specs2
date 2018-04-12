@@ -1,5 +1,4 @@
-package org.specs2
-package json
+package org.specs2.json
 
 /**
  * COPIED from the standard lib for convenience. Internal use only
@@ -54,7 +53,7 @@ object JSONFormat {
     case s : String => "\"" + quoteString(s) + "\""
     case jo : JSONObject => jo.toString(defaultFormatter)
     case ja : JSONArray => ja.toString(defaultFormatter)
-    case other => other.toString
+    case other => if (other == null) "null" else other.toString
   }
 
   /**
@@ -62,7 +61,8 @@ object JSONFormat {
    * for JSON output.
    */
   def quoteString (s : String) : String =
-    s.map {
+    if (s == null) "null"
+    else s.map {
       case '"'  => "\\\""
       case '\\' => "\\\\"
       case '/'  => "\\/"
@@ -181,7 +181,7 @@ class Lexer extends StdLexical with ImplicitConversions {
   }
 
   private def optString[A](pre: String, a: Option[A]) = a match {
-    case Some(x) => pre + x.toString
+    case Some(x) => pre + (if (x == null) "null" else x.toString)
     case None => ""
   }
 

@@ -1,6 +1,6 @@
 import sbt._
 import Keys._
-import org.scalajs.sbtplugin.ScalaJSPlugin.AutoImport._
+import org.scalajs.sbtplugin.ScalaJSPlugin.autoImport._
 
 object depends {
 
@@ -26,28 +26,18 @@ object depends {
     Seq(libraryDependencies ++= Seq("org.scala-js" %% "scalajs-test-interface" % scalaJSVersion),
         scalaJSStage in Test := FastOptStage)
 
-  def scalaParser(scalaVersion: String) =
-    if (scalaMinorVersionAtLeast(scalaVersion, 11))
-      Seq("org.scala-lang.modules" %% "scala-parser-combinators" % "1.0.6")
-    else
-      Seq()
+  def scalaParser = Def.setting {
+    Seq("org.scala-lang.modules" %%% "scala-parser-combinators" % "1.1.0") 
+  }
 
-  def scalaXML(scalaVersion: String) =
-    if (scalaMinorVersionAtLeast(scalaVersion, 11))
-      Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.6")
-    else
-      Seq()
+  def scalaXML = Def.setting {
+    Seq("org.scala-lang.modules" %% "scala-xml" % "1.0.6")
+  }
 
   def kindp(scalaVersion: String) =
     "org.spire-math" % "kind-projector" % "0.8.2" cross CrossVersion.binary
 
-  def si2712Dependency(scalaVersion: String) =
-    if (CrossVersion.partialVersion(scalaVersion).exists(_._2 < 11))
-      Seq(compilerPlugin("com.milessabin" % ("si2712fix-plugin_"+scalaVersion) % "1.2.0"))
-    else
-      Seq()
-
-  lazy val mockito       = Seq("org.mockito"  % "mockito-core"  % "2.7.22")
+  lazy val mockito       = Seq("org.mockito"  % "mockito-core"  % "2.16.0")
   lazy val junit         = Seq("junit"        % "junit"         % "4.12")
   lazy val hamcrest      = Seq("org.hamcrest" % "hamcrest-core" % "1.3")
 
@@ -79,14 +69,7 @@ object depends {
       Seq()
 
   lazy val resolvers =
-    Seq(updateOptions := updateOptions.value.withCachedResolution(true)) ++ {
-      sbt.Keys.resolvers ++=
-      Seq(
-        Resolver.sonatypeRepo("releases"),
-        Resolver.sonatypeRepo("snapshots"),
-        Resolver.typesafeIvyRepo("releases"),
-        "scalaz-bintray" at "https://dl.bintray.com/scalaz/releases")
-    }
+    Seq(sbt.Keys.resolvers ++= Seq(Resolver.sonatypeRepo("releases")))
 
   def scalaMinorVersionAtLeast(scalaVersion: String, n: Int): Boolean =
     CrossVersion.partialVersion(scalaVersion) match {

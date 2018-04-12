@@ -225,6 +225,19 @@ object Result {
     }
   }
 
+  /**
+   * This monoid only evaluates the second argument
+   * @return
+   */
+  val ResultShortCircuitMonoid: Monoid[Result] = new Monoid[Result] {
+    val zero = Success()
+
+    def append(mr1: Result, mr2: =>Result): Result = {
+      if (mr1.isIssue) mr1
+      else ResultFailureMonoid.append(mr1, mr2)
+    }
+  }
+
   /** the result of a side-effecting block */
   def unit(u: =>Unit) = ResultExecution.effectively { u; Success() }
 
@@ -241,10 +254,19 @@ object Result {
   def disjunctionErrorToResult(error: Throwable Either String): Result =
     error.fold(t => Error(t), m => Error(m))
 
-  /** this allows the creation of expectations with a for loop */
-  def foreach[T, R : AsResult](seq: Seq[T])(f: T => R): Result = {
-    seq.toList.foldMap(t => AsResult(f(t)))
-  }
+  /**
+   * this allows the creation of expectations with a for loop
+   * it returns the first result which is an issue or the last success
+   */
+  def foreach[T, R : AsResult](seq: Seq[T])(f: T => R): Result =
+    seq.toList.foldMap((t: T) => AsResult(f(t)))(ResultShortCircuitMonoid)
+
+  /**
+   * this returns a result which is a summary of all the results
+   * according to the ResultFailureMonoid
+   */
+  def forall[T, R : AsResult](seq: Seq[T])(f: T => R): Result =
+    seq.toList.foldMap((t: T) => AsResult(f(t)))(ResultFailureMonoid)
 }
 
 trait Results {
@@ -356,7 +378,7 @@ case class Error(m: String, t: Throwable) extends Result(s"${t.getClass.getName}
 
   /** @return an exception created from the message and the stackTraceElements */
   def exception = t
-  def stackTrace = t.getFullStackTrace.toList
+  def stackTrace = t.getFullStackTrace
 
   override def equals(o: Any) = {
     o match {

@@ -71,7 +71,7 @@ case class SlaveSbtRunner(args:       Array[String],
  * This object can be used to debug the behavior of the SbtRunner
  */
 object sbtRun extends MasterSbtRunner(Array(), Array(), Thread.currentThread.getContextClassLoader) {
-  def main(arguments: Array[String]) {
+  def main(arguments: Array[String]): Unit = {
     val env = Env(Arguments(arguments:_*))
     implicit def ee: ExecutionEnv = env.specs2ExecutionEnv
     try exit(start(arguments: _*))
@@ -98,7 +98,7 @@ object sbtRun extends MasterSbtRunner(Array(), Array(), Thread.currentThread.get
 }
 
 object NoEventHandler extends EventHandler {
-  def handle(event: Event) {}
+  def handle(event: Event): Unit = {}
 }
 
 object ConsoleLogger extends Logger {
@@ -138,12 +138,13 @@ case class SbtTask(aTaskDef: TaskDef, env: Env, loader: ClassLoader) extends sbt
 
   private def executeFuture(handler: EventHandler, loggers: Array[Logger]): Future[Unit] = {
     val ee = env.specs2ExecutionEnv
+    val printer = (s: String) => loggers.foreach(_.warn(s))
 
-    executeActionFuture(createSpecStructure(taskDef, loader, env))(ee).flatMap { case (result, warnings) =>
+    executeActionFuture(createSpecStructure(taskDef, loader, env), printer)(ee).flatMap { case (result, warnings) =>
       processResult(handler, loggers)(result, warnings)
       result.toOption.flatten match {
         case Some(structure) =>
-          executeActionFuture(specificationRun(aTaskDef, structure, env, handler, loggers))(ee).map { case (rs, ws) =>
+          executeActionFuture(specificationRun(aTaskDef, structure, env, handler, loggers), printer)(ee).map { case (rs, ws) =>
             processResult(handler, loggers)(rs, ws)
           }
 
@@ -159,7 +160,7 @@ case class SbtTask(aTaskDef: TaskDef, env: Env, loader: ClassLoader) extends sbt
     Array()
   }
 
-  /** @return the correponding task definition */
+  /** @return the corresponding task definition */
   def taskDef = aTaskDef
 
   /** display errors and warnings */
@@ -245,7 +246,7 @@ case class SbtTask(aTaskDef: TaskDef, env: Env, loader: ClassLoader) extends sbt
   /**
    * Notify sbt of warnings during the run
    */
-  private def handleRunWarnings(warnings: List[String], loggers: Array[Logger]) {
+  private def handleRunWarnings(warnings: List[String], loggers: Array[Logger]): Unit = {
     val logger = SbtLineLogger(loggers)
     Runner.logUserWarnings(warnings)(m => Name(logger.failureLine(m))).value
     logger.close

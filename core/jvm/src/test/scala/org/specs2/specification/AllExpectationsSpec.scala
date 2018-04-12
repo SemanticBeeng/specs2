@@ -4,14 +4,14 @@ package specification
 import _root_.org.specs2.mutable.{Specification => Spec}
 import org.specs2.execute.Result
 import org.specs2.main.Arguments
-import org.specs2.specification.core.{ContextualSpecificationStructure, Env}
+import org.specs2.specification.core.{ContextualSpecificationStructure, Env, OwnEnv}
 import org.specs2.specification.process._
 import user.specification._
 import fp.syntax._
 import control._
 import ExecuteActions._
 
-class AllExpectationsSpec extends Spec with AllExpectations { sequential
+class AllExpectationsSpec(val env: Env) extends Spec with AllExpectations with OwnEnv { sequential
 
   "A specification with the AllExpectations trait should" >> {
     "evaluate all its expectations" >> {
@@ -23,11 +23,11 @@ class AllExpectationsSpec extends Spec with AllExpectations { sequential
                                       "1 != 3 [AllExpectationsSpecification.scala:9]"
     }
     "short-circuit the rest of the example if an expectation fails and uses 'orThrow'" >> {
-      executedIssues.map(_.message).toList must containMatch("51 != 52")
+      executedIssues.map(_.message) must containMatch("51 != 52")
       executedIssues.map(_.message) must not containMatch("13 != 14")
     }
     "short-circuit the rest of the example if an expectation fails and uses 'orSkip'" >> {
-      executedSuspended.map(_.message).toList must not containMatch("'51' is not equal to '52'")
+      executedSuspended.map(_.message) must not containMatch("'51' is not equal to '52'")
       executedIssues.map(_.message) must not containMatch("'15' is not equal to '16'")
     }
     "work ok on a specification with selected fragments" >> {
@@ -63,18 +63,15 @@ class AllExpectationsSpec extends Spec with AllExpectations { sequential
   }
 
   def stats(spec: ContextualSpecificationStructure)(args: Arguments): Stats = {
-    val env1 = Env().setArguments(args)
-    try {
-      val executed = DefaultExecutor.executeSpec(spec.structure(env1) |> DefaultSelector.select(env1), env1)
-      Statistics.runStats(executed)(env1.executionEnv)
-    } finally env1.shutdown
+    val env1 = ownEnv.setArguments(args)
+    val executed = DefaultExecutor.executeSpec(spec.structure(env1) |> DefaultSelector.select(env1), env1)
+    Statistics.runStats(executed)(env1.executionEnv)
   }
 
   def results(spec: ContextualSpecificationStructure)(args: Arguments): List[Result] = {
-    val env1 = Env().setArguments(args)
-    try DefaultExecutor.executeSpec(spec.structure(env1), env1).fragments.fragments.
+    val env1 = ownEnv.setArguments(args)
+    DefaultExecutor.executeSpec(spec.structure(env1), env1).fragments.fragments.
       flatMap(_.traverse(_.executionResult)).run(env1.executionEnv)
-    finally env1.shutdown
   }
 
   def issues(spec: ContextualSpecificationStructure)(args: Arguments): List[Result] =

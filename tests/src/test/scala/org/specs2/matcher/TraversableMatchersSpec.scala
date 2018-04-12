@@ -12,9 +12,9 @@ import scala.collection.JavaConverters._
 import ActionMatchers._
 import fp.syntax._
 import execute.Result
-import org.specs2.specification.core.Env
+import org.specs2.specification.core.{Env, OwnEnv}
 
-class TraversableMatchersSpec(env: Env) extends Spec with ResultMatchers with Grouped with NumberOfTimes with MustMatchers { def is = s2"""
+class TraversableMatchersSpec(val env: Env) extends Spec with ResultMatchers with Grouped with NumberOfTimes with MustMatchers with OwnEnv { def is = s2"""
 
  We can check the elements of a collection by using matchers
    ${ Seq(1, 2, 3) must contain(2) }
@@ -31,7 +31,7 @@ class TraversableMatchersSpec(env: Env) extends Spec with ResultMatchers with Gr
    ${ Seq(1, 2) must contain(anyOf(1, 4)) }
    ${ (Seq(1, 2, 3) must not(contain(anyOf(1, 2, 4)))) returns "There are 2 successes\n'1' is contained in '1, 2, 4'\n'2' is contained in '1, 2, 4'\n" }
    ${ Seq("hello", "world") must contain(matching(".*orld")) }
-   ${ Seq("hello", "world") must contain((s: String) => s.size > 2) }
+   ${ Seq("hello", "world") must contain((s: String) => s.length > 2) }
    ${ Seq("1", "2", "3") must contain("3") and contain("2":Any) }
    ${ Seq("foobar").must(contain("foo")).not } see #416
    ${ Seq[Food](Pizza(), new Fruit()) must contain(Pizza()) }
@@ -220,7 +220,7 @@ class TraversableMatchersSpec(env: Env) extends Spec with ResultMatchers with Gr
           Seq(1) must not contain(1)
         }
       }
-      DefaultExecutor.runSpecification(spec, env).traverse(_.executionResult).map(_.suml) must beOk(ResultMatchers.beFailing[Result])
+      DefaultExecutor.runSpecification(spec, ownEnv).traverse(_.executionResult).map(_.suml) must beOk(ResultMatchers.beFailing[Result])
     }
   }
 
