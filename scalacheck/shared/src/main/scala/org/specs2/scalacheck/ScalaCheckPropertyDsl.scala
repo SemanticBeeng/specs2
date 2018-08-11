@@ -1,8 +1,9 @@
 package org.specs2
 package scalacheck
 
+import org.scalacheck.rng.Seed
 import org.scalacheck.util._
-import org.scalacheck.{Properties, Prop}
+import org.scalacheck.{Prop, Properties}
 import org.specs2.specification.core.Fragments
 import org.specs2.specification.create.FragmentsFactory
 
@@ -12,7 +13,7 @@ trait ScalaCheckPropertyDsl extends FragmentsFactory with AsResultProp {
 
   /** display properties as examples */
   def properties(ps: Properties): Fragments =
-    Fragments.foreach(ps.properties) { case (name, prop) =>
+    Fragments.foreach(ps.properties.toList) { case (name, prop) =>
       Fragments(fragmentFactory.break, fragmentFactory.example(name, prop))
     }
 
@@ -23,6 +24,9 @@ case class ScalaCheckProp(prop: Prop, parameters: Parameters, prettyFreqMap: Fre
 
   def setParameters(ps: Parameters): SelfType =
     copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
 
   def setPrettyFreqMap(f: FreqMap[Set[Any]] => Pretty): SelfType =
     copy(prettyFreqMap = f)

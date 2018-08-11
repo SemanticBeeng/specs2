@@ -24,7 +24,7 @@ trait AllExpectations extends StoredExpectations with FragmentsFactory with Spec
   /**
    * @return an example factory which will take the stored results and make them the example result
    */
-  implicit override def fragmentFactory: FragmentFactory =
+  implicit override protected def fragmentFactory: FragmentFactory =
     new ContextualFragmentFactory(super.fragmentFactory, (env: Env) => resultsContext(storedResults))
 
   /**
@@ -32,7 +32,7 @@ trait AllExpectations extends StoredExpectations with FragmentsFactory with Spec
    *
    * This method could be overridden to filter the captured results and remove the skipped results for example
    */
-  def resultsContext(results: =>Seq[Result]): Context = new ResultsContext(results)
+  def resultsContext(results: => scala.collection.Seq[Result]): Context = new ResultsContext(results)
 
   /**
    * we force the specification to be isolated if it's not sequential or already isolated.

@@ -128,7 +128,11 @@ trait Matcher[-T] { outer =>
    * @see MatchResult.not
    */
   def not = new Matcher[T] {
-    def apply[U <: T](a: Expectable[U]) = outer(a).not
+    def apply[U <: T](a: Expectable[U]) = {
+      val result = try outer(a)
+                   catch { case FailureException(f: Failure) => MatchFailure(f.message, f.message, a) }
+      result.not
+    }
   }
   /**
    * the logical and between 2 matchers
@@ -220,15 +224,16 @@ trait Matcher[-T] { outer =>
   /**
    * @return a Matcher with no messages
    */
-  def mute = new Matcher[T] {
-    def apply[S <: T](s: Expectable[S]) = outer.apply(s).mute
-  }
+  def mute = setMessage("")
 
   /**
    * @return update the failure message of a matcher
    */
   def updateMessage(f: String => String) = new Matcher[T] {
-    def apply[S <: T](s: Expectable[S]) = outer.apply(s).updateMessage(f)
+    def apply[S <: T](s: Expectable[S]) =
+      try outer.apply(s).updateMessage(f)
+      catch { case FailureException(Failure(m, e, st, d)) =>
+        throw FailureException(Failure(f(m), e, st, d)) }
   }
 
   /**

@@ -123,6 +123,7 @@ STUBS
  + Answers can use the method's parameters passed as an array
  + Answers can use the mock instance as the second parameter
  + Answers can use the mock instance, even when the method has 0 parameters
+ + Answers can use the all the invocation parameters
 
  + A parameter can be captured in order to check its value
  + A parameter can be captured in order to check its successive values
@@ -464,7 +465,7 @@ ${step(env)}                                                                    
     val list = mockAs[java.util.List[String]]("list")
 
     eg := {
-      list.get(anyInt) answers { i => "The parameter is " + i.toString}
+      list.get(anyInt) answers { i: Any => "The parameter is " + i.toString}
       list.get(2) must_== "The parameter is 2"
     }
 
@@ -475,7 +476,7 @@ ${step(env)}                                                                    
     }
 
     eg := {
-      list.set(anyInt, anyString) answers { i => "The parameters are " + (i.asInstanceOf[Array[_]].mkString("(",",",")")) }
+      list.set(anyInt, anyString) answers { i: Any => "The parameters are " + (i.asInstanceOf[Array[_]].mkString("(",",",")")) }
       list.set(1,"foo") must_== "The parameters are (1,foo)"
     }
 
@@ -485,9 +486,15 @@ ${step(env)}                                                                    
     }
 
     eg := {
-      list.size answers { m => m.toString.length}
+      list.size answers { m: Any => m.toString.length}
       list.size must_== 4
     }
+
+    eg := {
+      list.get(anyInt) answers { is: Array[AnyRef] => "The parameters are "+is.mkString("[", ",", "]") }
+      list.get(2) must_== "The parameters are [2]"
+    }
+
     eg := {
       list.get(1)
       val c = capture[Int]
@@ -532,17 +539,17 @@ ${step(env)}                                                                    
 
   "mockito matchers" - new group with Mockito with ThrownExpectations {
     trait M {
-      def javaList[T](a: java.util.List[T])
-      def javaSet[T](a: java.util.Set[T])
-      def javaCollection[T](a: java.util.Collection[T])
-      def javaMap[K, V](a: java.util.Map[K, V])
+      def javaList[T](a: java.util.List[T]): Unit
+      def javaSet[T](a: java.util.Set[T]): Unit
+      def javaCollection[T](a: java.util.Collection[T]): Unit
+      def javaMap[K, V](a: java.util.Map[K, V]): Unit
 
-      def List[T](a: List[T])
-      def Set[T](a: Set[T])
-      def Traversable[T](a: Traversable[T])
-      def Map[K, V](a: Map[K, V])
+      def List[T](a: List[T]): Unit
+      def Set[T](a: Set[T]): Unit
+      def Traversable[T](a: Traversable[T]): Unit
+      def Map[K, V](a: Map[K, V]): Unit
 
-      def varargs[T](ts: T*)
+      def varargs[T](ts: T*): Unit
 
       def method(a1: A, b: Boolean): Int
     }

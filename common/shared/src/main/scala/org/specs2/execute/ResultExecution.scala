@@ -30,6 +30,7 @@ trait ResultExecution { outer =>
       case e: AssertionError if fromJUnit(e)                                 => Failure(e.getMessage.notNull, "", e.getStackTrace.toList, details = FromNotImplementedError)
       case e: AssertionError                                                 => Error(e)
       case e: java.lang.Error if simpleClassName(e) == "NotImplementedError" => Failure(e.getMessage.notNull, "", e.getStackTrace.toList, details = FromJUnitAssertionError)
+      case e: java.lang.Error if simpleClassName(e) == "ExpectationError"    => Failure(e.toString, "", e.getStackTrace.toList, details = FromExpectationError)
       case t: Exception                                                      => Error(t)
     }
 
@@ -56,6 +57,7 @@ trait ResultExecution { outer =>
       case e: AssertionError if fromJUnit(e)                                 => throw FailureException(Failure(e.getMessage.notNull, "", e.getStackTrace.toList, details = FromNotImplementedError))
       case e: AssertionError                                                 => throw ErrorException(Error(e))
       case e: java.lang.Error if simpleClassName(e) == "NotImplementedError" => throw FailureException(Failure(e.getMessage.notNull, "", e.getStackTrace.toList, details = FromJUnitAssertionError))
+      case e: java.lang.Error if simpleClassName(e) == "ExpectationError"    => throw FailureException(Failure(e.toString, "", e.getStackTrace.toList, details = FromExpectationError))
       case t: Exception                                                      => throw ErrorException(Error(t))
     }
 
@@ -111,8 +113,9 @@ trait ResultExecution { outer =>
   }
 
   /** determine if an AssertionError has been thrown from JUnit or not */
-  private def fromJUnit(e: AssertionError) = e.getStackTrace.exists((st: StackTraceElement) => JUNIT_ASSERT.matcher(st.getClassName).matches)
+  private def fromJUnit(e: AssertionError) =
+    e.getStackTrace.exists((st: StackTraceElement) => JUNIT_ASSERT.matcher(st.getClassName).matches)
 
-  private lazy val JUNIT_ASSERT = Pattern.compile(".*junit.*Assert.*")
+  private lazy val JUNIT_ASSERT = Pattern.compile("org.junit.*|junit.framework.*")
 }
 object ResultExecution extends ResultExecution

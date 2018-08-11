@@ -9,7 +9,7 @@ trait ScalaCheckParameters {
   /**
    * default parameters. Uses ScalaCheck default values and doesn't print anything to the console
    */
-  implicit def defaultParameters: Parameters = new Parameters()
+  implicit def defaultParameters: Parameters = Parameters()
 
   implicit def defaultFreqMapPretty: FreqMap[Set[Any]] => Pretty = (fq: FreqMap[Set[Any]]) =>
     Pretty.prettyFreqMap(removeDetails(fq))
@@ -22,7 +22,7 @@ trait ScalaCheckParameters {
           workers: Int                                 = defaultParameters.workers,
           callback: Test.TestCallback                  = defaultParameters.testCallback,
           loader: Option[ClassLoader]                  = defaultParameters.loader): Parameters =
-    new Parameters(minTestsOk, minSize, maxDiscardRatio, maxSize, workers, callback, loader)
+    Parameters(minTestsOk, minSize, maxDiscardRatio, maxSize, workers, callback, loader)
 
   /** create parameters with verbose = true */
   def display(minTestsOk: Int                              = defaultParameters.minTestsOk,
@@ -32,6 +32,6 @@ trait ScalaCheckParameters {
               workers: Int                                 = defaultParameters.workers,
               callback: Test.TestCallback                  = defaultParameters.testCallback,
               loader: Option[ClassLoader]                  = defaultParameters.loader): Parameters =
-    new Parameters(minTestsOk, minSize, maxDiscardRatio, maxSize, workers, callback, loader).verbose
+    Parameters(minTestsOk, minSize, maxDiscardRatio, maxSize, workers, callback, loader).verbose
 }
 

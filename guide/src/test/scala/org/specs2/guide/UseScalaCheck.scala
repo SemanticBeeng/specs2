@@ -162,6 +162,8 @@ The parameters you can modify are:
  `callback`        |                        | a ScalaCheck TestCallback (see the [ScalaCheck documentation](http://www.scalacheck.org))
  `loader`          |                        | a custom classloader (see the [ScalaCheck documentation](http://www.scalacheck.org))
  `prettyParams`    |                        | a `Pretty.Params` instance to set the verbosity level when displaying `Pretty` instances
+ `seed`            | `None`                 | a Base64 encoded string which you can get from a previous failed run.
+ You can set the seed on the property directly with `setSeed(string)`
 
 #### Property level
 
@@ -185,6 +187,7 @@ Some properties can be overridden from the command line
  `maxSize`         | `scalacheck.maxsize`
  `workers`         | `scalacheck.workers`
  `verbose`         | `scalacheck.verbose`
+ `seed`            | `scalacheck.seed`
 
 #### Expectations
 
@@ -222,5 +225,16 @@ With $specs2 and the `org.specs2.execute.ResultImplicits` trait you can use the 
 prop((i: Int) => (i >= 18 && i <= 55) <==> isYoung(i))
 }}
 
+### Working with Seeds
+
+By default when a property fails the seed will be displayed (unless you `setVerbosity` to a negative number).
+If you want to "replay" a property with a that specific seed you can copy and set it on the property: ${snippet{
+prop ((i: Int) => i % 2 == 0).setSeed("f7ZhfyfeJz5eRysok6qBmtvt4SOxHjCIBNgn3Yhs5SD")
+}}
+
+You can also pass it on the command-line
+```
+sbt> testOnly *MySpec -- ex myTest scalacheck.seed f7ZhfyfeJz5eRysok6qBmtvt4SOxHjCIBNgn3Yhs5SD
+```
 """
 }

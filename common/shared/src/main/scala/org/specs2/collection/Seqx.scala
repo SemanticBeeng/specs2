@@ -64,13 +64,13 @@ trait Seqx { outer =>
      * This implementation reuses the Seq.diff implementation but with a user-defined equality
      * @return remove all the elements of other from seq with a user-defined equality function
      */
-    def difference(other: Seq[T], equality: (T, T) => Boolean = (_:T) == (_:T)): Seq[T] = {
+    def difference(other: Seq[T], equality: (T, T) => Boolean = (_:T) == (_:T)): scala.collection.Seq[T] = {
       val occurrences = occurrenceCounts(other.seq, equality)
       val result = new ListBuffer[T]
       for (x <- seq)
         if (occurrences(D(x, equality)) == 0) result += x
         else                                  occurrences(D(x, equality)) -= 1
-      result
+      result.toSeq
     }
 
     private case class D(t: T, equality: (T, T) => Boolean) {

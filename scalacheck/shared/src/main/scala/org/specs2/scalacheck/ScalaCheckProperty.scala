@@ -7,6 +7,7 @@ import execute._
 import specification._
 import AsResultProp._
 import ScalaCheckProperty._
+import org.scalacheck.rng.Seed
 import org.specs2.specification.core.{AsExecution, Execution}
 
 /**
@@ -22,6 +23,8 @@ trait ScalaCheckProperty {
   def prettyFreqMap: FreqMap[Set[Any]] => Pretty
 
   def setParameters(ps: Parameters): SelfType
+
+  def setSeed(seed: Seed): SelfType
 
   def setVerbosity(v: Int): SelfType =
     setParameters(parameters.setVerbosity(v))
@@ -137,7 +140,7 @@ case class ScalaCheckFunction1[T, R](
   }
 
   lazy val prop: Prop =
-    shrink.fold(Prop.forAllNoShrink(propFunction))(_ => Prop.forAll(propFunction))
+    makeProp(propFunction, shrink, parameters)
 
   def noShrink: SelfType = copy(shrink = None)
 
@@ -174,11 +177,16 @@ case class ScalaCheckFunction1[T, R](
   def setContext(context: Context): SelfType =
     copy(context = Some(context))
 
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
+
+  def setSeed(seed: String): SelfType =
+    copy(parameters = parameters.copy(seed = Parameters.makeSeed(seed)))
+
 }
 
 
-case class ScalaCheckFunction2[T1, T2, R](
-                                           execute: (T1, T2) => R,
+case class ScalaCheckFunction2[T1, T2, R]( execute: (T1, T2) => R,
                                            argInstances1: ScalaCheckArgInstances[T1], argInstances2: ScalaCheckArgInstances[T2],
                                            prettyFreqMap: FreqMap[Set[Any]] => Pretty,
                                            asResult: AsResult[R],
@@ -189,7 +197,6 @@ case class ScalaCheckFunction2[T1, T2, R](
 
   private implicit val asResult1  = asResult
   private implicit val (arb1,arb2) = (argInstances1.arbitrary,argInstances2.arbitrary)
-  private implicit val (sh1,sh2) = (argInstances1.shrink,argInstances2.shrink)
   private implicit val (pr1,pr2) = (argInstances1.pretty,argInstances2.pretty)
 
   lazy val propFunction = (t1: T1, t2: T2) => {
@@ -199,7 +206,8 @@ case class ScalaCheckFunction2[T1, T2, R](
   }
 
   lazy val prop: Prop =
-    makeProp((t1: T1) => makeProp((t2: T2) => propFunction(t1, t2), argInstances2.shrink), argInstances1.shrink)
+    makeProp((t1: T1) => makeProp((t2: T2) => propFunction(t1, t2), argInstances2.shrink, parameters), argInstances1.shrink,
+      parameters)
 
   def noShrink: SelfType = copy(argInstances1 = argInstances1.copy(shrink = None), argInstances2 = argInstances2.copy(shrink = None))
 
@@ -247,6 +255,9 @@ case class ScalaCheckFunction2[T1, T2, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
 }
 
 
@@ -262,7 +273,6 @@ case class ScalaCheckFunction3[T1, T2, T3, R](
 
   private implicit val asResult1  = asResult
   private implicit val (arb1,arb2,arb3) = (argInstances1.arbitrary,argInstances2.arbitrary,argInstances3.arbitrary)
-  private implicit val (sh1,sh2,sh3) = (argInstances1.shrink,argInstances2.shrink,argInstances3.shrink)
   private implicit val (pr1,pr2,pr3) = (argInstances1.pretty,argInstances2.pretty,argInstances3.pretty)
 
   lazy val propFunction = (t1: T1, t2: T2, t3: T3) => {
@@ -272,7 +282,8 @@ case class ScalaCheckFunction3[T1, T2, T3, R](
   }
 
   lazy val prop: Prop =
-    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => propFunction(t1, t2, t3), argInstances3.shrink), argInstances2.shrink), argInstances1.shrink)
+    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => propFunction(t1, t2, t3), argInstances3.shrink, parameters),
+      argInstances2.shrink, parameters), argInstances1.shrink, parameters)
 
   def noShrink: SelfType = copy(argInstances1 = argInstances1.copy(shrink = None), argInstances2 = argInstances2.copy(shrink = None), argInstances3 = argInstances3.copy(shrink = None))
 
@@ -327,6 +338,10 @@ case class ScalaCheckFunction3[T1, T2, T3, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
+
 }
 
 
@@ -342,7 +357,6 @@ case class ScalaCheckFunction4[T1, T2, T3, T4, R](
 
   private implicit val asResult1  = asResult
   private implicit val (arb1,arb2,arb3,arb4) = (argInstances1.arbitrary,argInstances2.arbitrary,argInstances3.arbitrary,argInstances4.arbitrary)
-  private implicit val (sh1,sh2,sh3,sh4) = (argInstances1.shrink,argInstances2.shrink,argInstances3.shrink,argInstances4.shrink)
   private implicit val (pr1,pr2,pr3,pr4) = (argInstances1.pretty,argInstances2.pretty,argInstances3.pretty,argInstances4.pretty)
 
   lazy val propFunction = (t1: T1, t2: T2, t3: T3, t4: T4) => {
@@ -352,7 +366,7 @@ case class ScalaCheckFunction4[T1, T2, T3, T4, R](
   }
 
   lazy val prop: Prop =
-    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => propFunction(t1, t2, t3, t4), argInstances4.shrink), argInstances3.shrink), argInstances2.shrink), argInstances1.shrink)
+    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => propFunction(t1, t2, t3, t4), argInstances4.shrink, parameters), argInstances3.shrink, parameters), argInstances2.shrink, parameters), argInstances1.shrink, parameters)
 
   def noShrink: SelfType = copy(argInstances1 = argInstances1.copy(shrink = None), argInstances2 = argInstances2.copy(shrink = None), argInstances3 = argInstances3.copy(shrink = None), argInstances4 = argInstances4.copy(shrink = None))
 
@@ -414,6 +428,10 @@ case class ScalaCheckFunction4[T1, T2, T3, T4, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
+
 }
 
 
@@ -429,7 +447,6 @@ case class ScalaCheckFunction5[T1, T2, T3, T4, T5, R](
 
   private implicit val asResult1  = asResult
   private implicit val (arb1,arb2,arb3,arb4,arb5) = (argInstances1.arbitrary,argInstances2.arbitrary,argInstances3.arbitrary,argInstances4.arbitrary,argInstances5.arbitrary)
-  private implicit val (sh1,sh2,sh3,sh4,sh5) = (argInstances1.shrink,argInstances2.shrink,argInstances3.shrink,argInstances4.shrink,argInstances5.shrink)
   private implicit val (pr1,pr2,pr3,pr4,pr5) = (argInstances1.pretty,argInstances2.pretty,argInstances3.pretty,argInstances4.pretty,argInstances5.pretty)
 
   lazy val propFunction = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5) => {
@@ -439,7 +456,7 @@ case class ScalaCheckFunction5[T1, T2, T3, T4, T5, R](
   }
 
   lazy val prop: Prop =
-    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => propFunction(t1, t2, t3, t4, t5), argInstances5.shrink), argInstances4.shrink), argInstances3.shrink), argInstances2.shrink), argInstances1.shrink)
+    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => propFunction(t1, t2, t3, t4, t5), argInstances5.shrink, parameters), argInstances4.shrink, parameters), argInstances3.shrink, parameters), argInstances2.shrink, parameters), argInstances1.shrink, parameters)
 
   def noShrink: SelfType = copy(argInstances1 = argInstances1.copy(shrink = None), argInstances2 = argInstances2.copy(shrink = None), argInstances3 = argInstances3.copy(shrink = None), argInstances4 = argInstances4.copy(shrink = None), argInstances5 = argInstances5.copy(shrink = None))
 
@@ -508,6 +525,9 @@ case class ScalaCheckFunction5[T1, T2, T3, T4, T5, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
 }
 
 
@@ -523,7 +543,6 @@ case class ScalaCheckFunction6[T1, T2, T3, T4, T5, T6, R](
 
   private implicit val asResult1  = asResult
   private implicit val (arb1,arb2,arb3,arb4,arb5,arb6) = (argInstances1.arbitrary,argInstances2.arbitrary,argInstances3.arbitrary,argInstances4.arbitrary,argInstances5.arbitrary,argInstances6.arbitrary)
-  private implicit val (sh1,sh2,sh3,sh4,sh5,sh6) = (argInstances1.shrink,argInstances2.shrink,argInstances3.shrink,argInstances4.shrink,argInstances5.shrink,argInstances6.shrink)
   private implicit val (pr1,pr2,pr3,pr4,pr5,pr6) = (argInstances1.pretty,argInstances2.pretty,argInstances3.pretty,argInstances4.pretty,argInstances5.pretty,argInstances6.pretty)
 
   lazy val propFunction = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6) => {
@@ -533,7 +552,8 @@ case class ScalaCheckFunction6[T1, T2, T3, T4, T5, T6, R](
   }
 
   lazy val prop: Prop =
-    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => makeProp((t6: T6) => propFunction(t1, t2, t3, t4, t5, t6), argInstances6.shrink), argInstances5.shrink), argInstances4.shrink), argInstances3.shrink), argInstances2.shrink), argInstances1.shrink)
+    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => makeProp((t6: T6) => propFunction(t1, t2, t3, t4, t5, t6), argInstances6.shrink, parameters), argInstances5.shrink, parameters), argInstances4.shrink, parameters), argInstances3.shrink, parameters), argInstances2.shrink, parameters),
+      argInstances1.shrink, parameters)
 
   def noShrink: SelfType = copy(argInstances1 = argInstances1.copy(shrink = None), argInstances2 = argInstances2.copy(shrink = None), argInstances3 = argInstances3.copy(shrink = None), argInstances4 = argInstances4.copy(shrink = None), argInstances5 = argInstances5.copy(shrink = None), argInstances6 = argInstances6.copy(shrink = None))
 
@@ -609,6 +629,10 @@ case class ScalaCheckFunction6[T1, T2, T3, T4, T5, T6, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
+
 }
 
 
@@ -624,7 +648,6 @@ case class ScalaCheckFunction7[T1, T2, T3, T4, T5, T6, T7, R](
 
   private implicit val asResult1  = asResult
   private implicit val (arb1,arb2,arb3,arb4,arb5,arb6,arb7) = (argInstances1.arbitrary,argInstances2.arbitrary,argInstances3.arbitrary,argInstances4.arbitrary,argInstances5.arbitrary,argInstances6.arbitrary,argInstances7.arbitrary)
-  private implicit val (sh1,sh2,sh3,sh4,sh5,sh6,sh7) = (argInstances1.shrink,argInstances2.shrink,argInstances3.shrink,argInstances4.shrink,argInstances5.shrink,argInstances6.shrink,argInstances7.shrink)
   private implicit val (pr1,pr2,pr3,pr4,pr5,pr6,pr7) = (argInstances1.pretty,argInstances2.pretty,argInstances3.pretty,argInstances4.pretty,argInstances5.pretty,argInstances6.pretty,argInstances7.pretty)
 
   lazy val propFunction = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7) => {
@@ -634,7 +657,7 @@ case class ScalaCheckFunction7[T1, T2, T3, T4, T5, T6, T7, R](
   }
 
   lazy val prop: Prop =
-    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => makeProp((t6: T6) => makeProp((t7: T7) => propFunction(t1, t2, t3, t4, t5, t6, t7), argInstances7.shrink), argInstances6.shrink), argInstances5.shrink), argInstances4.shrink), argInstances3.shrink), argInstances2.shrink), argInstances1.shrink)
+    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => makeProp((t6: T6) => makeProp((t7: T7) => propFunction(t1, t2, t3, t4, t5, t6, t7), argInstances7.shrink, parameters), argInstances6.shrink, parameters), argInstances5.shrink, parameters), argInstances4.shrink, parameters), argInstances3.shrink, parameters), argInstances2.shrink, parameters), argInstances1.shrink, parameters)
 
   def noShrink: SelfType = copy(argInstances1 = argInstances1.copy(shrink = None), argInstances2 = argInstances2.copy(shrink = None), argInstances3 = argInstances3.copy(shrink = None), argInstances4 = argInstances4.copy(shrink = None), argInstances5 = argInstances5.copy(shrink = None), argInstances6 = argInstances6.copy(shrink = None), argInstances7 = argInstances7.copy(shrink = None))
 
@@ -717,6 +740,10 @@ case class ScalaCheckFunction7[T1, T2, T3, T4, T5, T6, T7, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
+
 }
 
 
@@ -732,7 +759,6 @@ case class ScalaCheckFunction8[T1, T2, T3, T4, T5, T6, T7, T8, R](
 
   private implicit val asResult1  = asResult
   private implicit val (arb1,arb2,arb3,arb4,arb5,arb6,arb7,arb8) = (argInstances1.arbitrary,argInstances2.arbitrary,argInstances3.arbitrary,argInstances4.arbitrary,argInstances5.arbitrary,argInstances6.arbitrary,argInstances7.arbitrary,argInstances8.arbitrary)
-  private implicit val (sh1,sh2,sh3,sh4,sh5,sh6,sh7,sh8) = (argInstances1.shrink,argInstances2.shrink,argInstances3.shrink,argInstances4.shrink,argInstances5.shrink,argInstances6.shrink,argInstances7.shrink,argInstances8.shrink)
   private implicit val (pr1,pr2,pr3,pr4,pr5,pr6,pr7,pr8) = (argInstances1.pretty,argInstances2.pretty,argInstances3.pretty,argInstances4.pretty,argInstances5.pretty,argInstances6.pretty,argInstances7.pretty,argInstances8.pretty)
 
   lazy val propFunction = (t1: T1, t2: T2, t3: T3, t4: T4, t5: T5, t6: T6, t7: T7, t8: T8) => {
@@ -742,7 +768,8 @@ case class ScalaCheckFunction8[T1, T2, T3, T4, T5, T6, T7, T8, R](
   }
 
   lazy val prop: Prop =
-    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => makeProp((t6: T6) => makeProp((t7: T7) => makeProp((t8: T8) => propFunction(t1, t2, t3, t4, t5, t6, t7, t8), argInstances8.shrink), argInstances7.shrink), argInstances6.shrink), argInstances5.shrink), argInstances4.shrink), argInstances3.shrink), argInstances2.shrink), argInstances1.shrink)
+    makeProp((t1: T1) => makeProp((t2: T2) => makeProp((t3: T3) => makeProp((t4: T4) => makeProp((t5: T5) => makeProp((t6: T6) => makeProp((t7: T7) => makeProp((t8: T8) => propFunction(t1, t2, t3, t4, t5, t6, t7, t8), argInstances8.shrink, parameters), argInstances7.shrink, parameters),
+      argInstances6.shrink, parameters), argInstances5.shrink, parameters), argInstances4.shrink, parameters), argInstances3.shrink, parameters), argInstances2.shrink, parameters), argInstances1.shrink, parameters)
 
   def noShrink: SelfType = copy(argInstances1 = argInstances1.copy(shrink = None), argInstances2 = argInstances2.copy(shrink = None), argInstances3 = argInstances3.copy(shrink = None), argInstances4 = argInstances4.copy(shrink = None), argInstances5 = argInstances5.copy(shrink = None), argInstances6 = argInstances6.copy(shrink = None), argInstances7 = argInstances7.copy(shrink = None), argInstances8 = argInstances8.copy(shrink = None))
 
@@ -832,6 +859,10 @@ case class ScalaCheckFunction8[T1, T2, T3, T4, T5, T6, T7, T8, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
+
 }
 
 case class ScalaCheckArgInstances[T](arbitrary: Arbitrary[T], shrink: Option[Shrink[T]], collectors: List[T => Any], pretty: T => Pretty) {
@@ -848,8 +879,14 @@ object ScalaCheckProperty {
       }
   }
 
-  def makeProp[T](f: T => Prop, shrink: Option[Shrink[T]])(implicit a: Arbitrary[T], p: T => Pretty): Prop =
-    shrink.fold(Prop.forAllNoShrink(f))(s => Prop.forAll(f)(identity, a, s, p))
+  def makeProp[T](f: T => Prop, shrink: Option[Shrink[T]], parameters: Parameters)(
+    implicit a: Arbitrary[T], p: T => Pretty): Prop = {
+    shrink match {
+      case None    => Prop.forAllNoShrink(f)
+      case Some(s) => Prop.forAll(f)(identity, a, s, p)
+    }
+  }
+
 
   def TNList(n: Int) = (1 to n).map("T"+_).mkString(", ")
   def TNParamList(n: Int) = (1 to n).map(i => s"t$i: T$i").mkString(", ")
@@ -867,13 +904,13 @@ case class ScalaCheckFunction$n[${TNList(n)}, R](
   prettyFreqMap: FreqMap[Set[Any]] => Pretty,
   asResult: AsResult[R],
   context: Option[Context],
-  parameters: Parameters) extends ScalaCheckFunction {
+  parameters: Parameters,
+  seed: Seed) extends ScalaCheckFunction {
 
   type SelfType = ScalaCheckFunction$n[${TNList(n)}, R]
 
   private implicit val asResult1  = asResult
   private implicit val ${ (1 to n).map(i => s"arb$i").mkString("(", ",", ")") } = ${ (1 to n).map(i => s"argInstances$i.arbitrary").mkString("(", ",", ")") }
-  private implicit val ${ (1 to n).map(i => s"sh$i").mkString("(", ",", ")") } = ${ (1 to n).map(i => s"argInstances$i.shrink").mkString("(", ",", ")") }
   private implicit val ${ (1 to n).map(i => s"pr$i").mkString("(", ",", ")") } = ${ (1 to n).map(i => s"argInstances$i.pretty").mkString("(", ",", ")") }
 
   lazy val propFunction = (${TNParamList(n)}) => {
@@ -884,7 +921,7 @@ case class ScalaCheckFunction$n[${TNList(n)}, R](
 
   lazy val prop: Prop =
     ${(1 to n).reverse.foldLeft(s"propFunction(${NParamList(n)})") { (res, i) =>
-       s"makeProp((t$i: T$i) => $res, argInstances$i.shrink)"
+       s"makeProp((t$i: T$i) => $res, argInstances$i.shrink, parameters)"
     }}
 
   def noShrink: SelfType = copy(${(1 to n).map(i => s"argInstances$i = argInstances$i.copy(shrink = None)").mkString(", ")})
@@ -926,6 +963,9 @@ case class ScalaCheckFunction$n[${TNList(n)}, R](
   def setContext(context: Context): SelfType = copy(context = Some(context))
 
   def setParameters(ps: Parameters): SelfType = copy(parameters = ps)
+
+  def setSeed(seed: Seed): SelfType =
+    copy(parameters = parameters.copy(seed = Some(seed)))
 }""".stripMargin
 
 
